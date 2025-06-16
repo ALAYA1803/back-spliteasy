@@ -1,22 +1,20 @@
 package com.example.spliteasybackend.user.domain.models.aggregates;
 
 import com.example.spliteasybackend.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
+import com.example.spliteasybackend.user.domain.models.commands.CreateUserCommand;
+import com.example.spliteasybackend.user.domain.models.valueobjects.Role;
 import jakarta.persistence.*;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.math.BigDecimal;
 
-@Getter
-@Setter
-@NoArgsConstructor
 @Entity
+@Getter
 public class User extends AuditableAbstractAggregateRoot<User> {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long id; // 👈 agregado aquí
 
     @Column(nullable = false, length = 100)
     private String name;
@@ -32,18 +30,25 @@ public class User extends AuditableAbstractAggregateRoot<User> {
     private Role role;
 
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal income = BigDecimal.ZERO;
+    private BigDecimal income;
 
-    public enum Role {
-        REPRESENTANTE,
-        MIEMBRO
+    public User(CreateUserCommand command) {
+        this.name = command.name();
+        this.email = command.email();
+        this.password = command.password();
+        this.role = command.role();
+        this.income = command.income() != null ? command.income() : BigDecimal.ZERO;
     }
 
-    public User(String name, String email, String password, Role role, BigDecimal income) {
-        this.name = name;
-        this.email = email;
-        this.password = password;
-        this.role = role;
-        this.income = income;
+    public User() {
+        // Constructor por defecto requerido por JPA
+    }
+
+    public void update(CreateUserCommand command) {
+        this.name = command.name();
+        this.email = command.email();
+        this.password = command.password();
+        this.role = command.role();
+        this.income = command.income() != null ? command.income() : BigDecimal.ZERO;
     }
 }
