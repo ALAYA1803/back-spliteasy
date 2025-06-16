@@ -9,7 +9,7 @@ public class UserResourceFromEntityAssembler {
         return new UserResource(
                 entity.getId(),
                 entity.getName(),
-                entity.getEmail(),
+                entity.getEmail().address(),
                 entity.getRole().name(),         // Convertir enum a String
                 entity.getIncome()               // Ya es BigDecimal
         );
