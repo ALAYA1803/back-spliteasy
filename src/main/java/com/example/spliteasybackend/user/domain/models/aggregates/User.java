@@ -2,6 +2,7 @@ package com.example.spliteasybackend.user.domain.models.aggregates;
 
 import com.example.spliteasybackend.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
 import com.example.spliteasybackend.user.domain.models.commands.CreateUserCommand;
+import com.example.spliteasybackend.user.domain.models.valueobjects.EmailAddress;
 import com.example.spliteasybackend.user.domain.models.valueobjects.Role;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -19,8 +20,8 @@ public class User extends AuditableAbstractAggregateRoot<User> {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(nullable = false, unique = true, length = 100)
-    private String email;
+    @Embedded
+    private EmailAddress email;
 
     @Column(nullable = false, length = 255)
     private String password;
@@ -34,7 +35,7 @@ public class User extends AuditableAbstractAggregateRoot<User> {
 
     public User(CreateUserCommand command) {
         this.name = command.name();
-        this.email = command.email();
+        this.email = new EmailAddress(command.email());
         this.password = command.password();
         this.role = command.role();
         this.income = command.income() != null ? command.income() : BigDecimal.ZERO;
@@ -46,7 +47,7 @@ public class User extends AuditableAbstractAggregateRoot<User> {
 
     public void update(CreateUserCommand command) {
         this.name = command.name();
-        this.email = command.email();
+        this.email = new EmailAddress(command.email());
         this.password = command.password();
         this.role = command.role();
         this.income = command.income() != null ? command.income() : BigDecimal.ZERO;
