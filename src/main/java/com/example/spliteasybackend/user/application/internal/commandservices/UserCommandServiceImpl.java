@@ -19,8 +19,8 @@ public class UserCommandServiceImpl implements UserCommandService {
 
     @Override
     public Optional<User> handle(CreateUserCommand command) {
-
-        var user = new User(command);
+        // ✅ usa la lógica de dominio (fábrica con validación)
+        var user = User.crear(command);
         userRepository.save(user);
         return Optional.of(user);
     }
@@ -32,7 +32,10 @@ public class UserCommandServiceImpl implements UserCommandService {
 
         var user = optionalUser.get();
 
-        user.update(command); // Este método lo crearemos ahora
+        // ✅ actualiza usando lógica de negocio
+        user.actualizarIngreso(command.income());
+        user.cambiarRol(command.role());
+        user.update(command); // puedes mantenerlo si también actualiza nombre, email, etc.
 
         userRepository.save(user);
         return Optional.of(user);

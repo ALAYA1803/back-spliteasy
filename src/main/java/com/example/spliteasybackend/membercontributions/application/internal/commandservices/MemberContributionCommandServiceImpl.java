@@ -1,10 +1,14 @@
 // MemberContributionCommandServiceImpl.java
 package com.example.spliteasybackend.membercontributions.application.internal.commandservices;
 
+import com.example.spliteasybackend.contributions.domain.models.aggregates.Contribution;
+import com.example.spliteasybackend.contributions.infrastructure.persistance.jpa.repositories.ContributionRepository;
 import com.example.spliteasybackend.membercontributions.domain.models.aggregates.MemberContribution;
 import com.example.spliteasybackend.membercontributions.domain.models.commands.CreateMemberContributionCommand;
 import com.example.spliteasybackend.membercontributions.domain.services.MemberContributionCommandService;
 import com.example.spliteasybackend.membercontributions.infrastructure.persistance.jpa.repositories.MemberContributionRepository;
+import com.example.spliteasybackend.user.domain.models.aggregates.User;
+import com.example.spliteasybackend.user.infrastructure.persistance.jpa.repositories.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -12,36 +16,52 @@ import java.util.Optional;
 @Service
 public class MemberContributionCommandServiceImpl implements MemberContributionCommandService {
 
-    private final MemberContributionRepository repository;
+    private final MemberContributionRepository memberContributionRepository;
+    private final ContributionRepository contributionRepository;
+    private final UserRepository userRepository;
 
-    public MemberContributionCommandServiceImpl(MemberContributionRepository repository) {
-        this.repository = repository;
+    public MemberContributionCommandServiceImpl(
+            MemberContributionRepository memberContributionRepository,
+            ContributionRepository contributionRepository,
+            UserRepository userRepository) {
+        this.memberContributionRepository = memberContributionRepository;
+        this.contributionRepository = contributionRepository;
+        this.userRepository = userRepository;
     }
 
     @Override
     public Optional<MemberContribution> handle(CreateMemberContributionCommand command) {
-        var entity = new MemberContribution(command);
-        repository.save(entity);
+        Optional<Contribution> contributionOpt = contributionRepository.findById(command.contributionId());
+        Optional<User> userOpt = userRepository.findById(command.memberId());
+
+        if (contributionOpt.isEmpty() || userOpt.isEmpty()) return Optional.empty();
+
+        MemberContribution entity = new MemberContribution(
+                contributionOpt.get(),
+                userOpt.get(),
+                command.monto()
+        );
+
+        memberContributionRepository.save(entity);
         return Optional.of(entity);
     }
 
     @Override
     public Optional<MemberContribution> update(Long id, CreateMemberContributionCommand command) {
-        var optional = repository.findById(id);
+        var optional = memberContributionRepository.findById(id);
         if (optional.isEmpty()) return Optional.empty();
 
         var entity = optional.get();
+        entity.update(command);
 
-        entity.update(command); // Asegúrate de tener este método implementado en el agregado
-
-        repository.save(entity);
+        memberContributionRepository.save(entity);
         return Optional.of(entity);
     }
 
     @Override
     public boolean delete(Long id) {
-        if (!repository.existsById(id)) return false;
-        repository.deleteById(id);
+        if (!memberContributionRepository.existsById(id)) return false;
+        memberContributionRepository.deleteById(id);
         return true;
     }
 }

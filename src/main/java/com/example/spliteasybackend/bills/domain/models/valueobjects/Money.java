@@ -10,7 +10,10 @@ public class Money {
 
     private BigDecimal value;
 
-    public Money() {
+    public static final Money ZERO = new Money(BigDecimal.ZERO); // ✅ Constante estática
+
+    protected Money() {
+        this.value = BigDecimal.ZERO;
     }
 
     public Money(BigDecimal value) {
@@ -28,7 +31,10 @@ public class Money {
     }
 
     public Money subtract(Money other) {
-        return new Money(this.value.subtract(other.value));
+        var result = this.value.subtract(other.value);
+        if (result.compareTo(BigDecimal.ZERO) < 0)
+            throw new IllegalArgumentException("Resulting money cannot be negative");
+        return new Money(result);
     }
 
     @Override

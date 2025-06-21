@@ -8,8 +8,8 @@ public class HouseholdMemberResourceFromEntityAssembler {
     public static HouseholdMemberResource toResourceFromEntity(HouseholdMember entity) {
         return new HouseholdMemberResource(
                 entity.getId(),
-                entity.getUserId(),
-                entity.getHouseholdId()
+                entity.getUser() != null ? entity.getUser().getId() : null,
+                entity.getHousehold() != null ? entity.getHousehold().getId() : null
         );
     }
 }

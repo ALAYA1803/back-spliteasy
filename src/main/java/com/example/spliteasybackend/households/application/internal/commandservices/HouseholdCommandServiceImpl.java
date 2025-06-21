@@ -4,6 +4,7 @@ import com.example.spliteasybackend.households.domain.models.aggregates.Househol
 import com.example.spliteasybackend.households.domain.models.commands.CreateHouseholdCommand;
 import com.example.spliteasybackend.households.domain.services.HouseholdCommandService;
 import com.example.spliteasybackend.households.infrastructure.persistance.jpa.repositories.HouseholdRepository;
+import com.example.spliteasybackend.user.infrastructure.persistance.jpa.repositories.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -11,35 +12,53 @@ import java.util.Optional;
 @Service
 public class HouseholdCommandServiceImpl implements HouseholdCommandService {
 
-    private final HouseholdRepository repository;
+    private final HouseholdRepository householdRepository;
+    private final UserRepository userRepository;
 
-    public HouseholdCommandServiceImpl(HouseholdRepository repository) {
-        this.repository = repository;
+    public HouseholdCommandServiceImpl(HouseholdRepository householdRepository, UserRepository userRepository) {
+        this.householdRepository = householdRepository;
+        this.userRepository = userRepository;
     }
 
     @Override
     public Optional<Household> handle(CreateHouseholdCommand command) {
-        var household = new Household(command);
-        repository.save(household);
+        // ✅ Obtener al representante por ID
+        var representante = userRepository.findById(command.representanteId())
+                .orElseThrow(() -> new IllegalArgumentException("Representante no encontrado"));
+
+        // ✅ Crear hogar con lógica de negocio
+        var household = Household.crear(command, representante);
+        householdRepository.save(household);
+
         return Optional.of(household);
     }
 
     @Override
     public Optional<Household> update(Long id, CreateHouseholdCommand command) {
-        var optional = repository.findById(id);
+        var optional = householdRepository.findById(id);
         if (optional.isEmpty()) return Optional.empty();
 
         var household = optional.get();
-        household.update(command); // Este método lo implementaremos en el agregado
 
-        repository.save(household);
+        // ⚠️ Validamos si el representante cambió
+        if (!household.getRepresentante().getId().equals(command.representanteId())) {
+            var nuevoRepresentante = userRepository.findById(command.representanteId())
+                    .orElseThrow(() -> new IllegalArgumentException("Representante no encontrado"));
+
+            household.transferirRepresentacionA(nuevoRepresentante);
+        }
+
+        // ✅ Actualiza otros campos (nombre, moneda, descripción)
+        household.update(command);
+        householdRepository.save(household);
+
         return Optional.of(household);
     }
 
     @Override
     public boolean delete(Long id) {
-        if (!repository.existsById(id)) return false;
-        repository.deleteById(id);
+        if (!householdRepository.existsById(id)) return false;
+        householdRepository.deleteById(id);
         return true;
     }
 }

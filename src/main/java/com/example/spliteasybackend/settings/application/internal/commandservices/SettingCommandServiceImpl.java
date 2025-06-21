@@ -4,6 +4,8 @@ import com.example.spliteasybackend.settings.domain.models.aggregates.Setting;
 import com.example.spliteasybackend.settings.domain.models.commands.CreateSettingCommand;
 import com.example.spliteasybackend.settings.domain.services.SettingCommandService;
 import com.example.spliteasybackend.settings.infrastructure.persistance.jpa.repositories.SettingRepository;
+import com.example.spliteasybackend.user.domain.models.aggregates.User;
+import com.example.spliteasybackend.user.infrastructure.persistance.jpa.repositories.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -12,14 +14,19 @@ import java.util.Optional;
 public class SettingCommandServiceImpl implements SettingCommandService {
 
     private final SettingRepository settingRepository;
+    private final UserRepository userRepository;
 
-    public SettingCommandServiceImpl(SettingRepository settingRepository) {
+    public SettingCommandServiceImpl(SettingRepository settingRepository, UserRepository userRepository) {
         this.settingRepository = settingRepository;
+        this.userRepository = userRepository;
     }
 
     @Override
     public Optional<Setting> handle(CreateSettingCommand command) {
-        var setting = new Setting(command);
+        User user = userRepository.findById(command.userId())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        Setting setting = new Setting(user, command);
         settingRepository.save(setting);
         return Optional.of(setting);
     }

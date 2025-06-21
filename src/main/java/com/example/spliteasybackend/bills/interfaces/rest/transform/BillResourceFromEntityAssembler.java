@@ -10,10 +10,10 @@ public class BillResourceFromEntityAssembler {
     public static BillResource toResourceFromEntity(Bill entity) {
         return new BillResource(
                 entity.getId(),
-                entity.getHouseholdId(),
+                entity.getHousehold() != null ? entity.getHousehold().getId() : null,
                 entity.getDescription(),
                 entity.getMonto() != null ? entity.getMonto().value() : BigDecimal.ZERO, /// Extraer BigDecimal desde el value object Money
-                entity.getCreatedBy(),
+                entity.getCreatedBy() != null ? entity.getCreatedBy().getId() : null,
                 entity.getFecha()
         );
     }
