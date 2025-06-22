@@ -18,5 +18,5 @@ RUN mvn clean package -DskipTests
 EXPOSE 8080
 
 # Ejecutamos el jar generado
-CMD ["java", "-jar", "target/platform-0.0.1-SNAPSHOT.jar"]
+CMD ["java", "-jar", "target/spliteasy-backend-0.0.1-SNAPSHOT.jar"]
 
