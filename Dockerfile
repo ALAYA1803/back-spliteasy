@@ -1,5 +1,4 @@
-FROM ubuntu:latest
-LABEL authors="Luis Díaz"
+
 
 # Etapa única: compila y ejecuta en la misma imagen
 FROM eclipse-temurin:24-jdk
@@ -21,4 +20,3 @@ EXPOSE 8080
 # Ejecutamos el jar generado
 CMD ["java", "-jar", "target/platform-0.0.1-SNAPSHOT.jar"]
 
-ENTRYPOINT ["top", "-b"]
