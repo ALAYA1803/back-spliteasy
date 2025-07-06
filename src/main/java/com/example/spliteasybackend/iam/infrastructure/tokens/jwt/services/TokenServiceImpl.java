@@ -1,5 +1,6 @@
 package com.example.spliteasybackend.iam.infrastructure.tokens.jwt.services;
 
+import com.example.spliteasybackend.iam.application.internal.outboundservices.tokens.TokenService;
 import com.example.spliteasybackend.iam.infrastructure.tokens.jwt.BearerTokenService;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
@@ -24,7 +25,7 @@ import java.util.function.Function;
  * It uses the secret and expiration days from the application.properties file.
  */
 @Service
-public class TokenServiceImpl implements BearerTokenService {
+public class TokenServiceImpl implements TokenService, BearerTokenService {
     private final Logger LOGGER = LoggerFactory.getLogger(TokenServiceImpl.class);
 
     private static final String AUTHORIZATION_PARAMETER_NAME = "Authorization";
