@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,6 +35,7 @@ public class MemberContributionsController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('ROLE_REPRESENTANTE')")
     @Operation(summary = "Create a member contribution")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Member contribution created"),
@@ -79,6 +81,7 @@ public class MemberContributionsController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_REPRESENTANTE')")
     @Operation(summary = "Delete member contribution by ID")
     public ResponseEntity<Void> deleteById(@PathVariable Long id) {
         boolean deleted = commandService.delete(id);

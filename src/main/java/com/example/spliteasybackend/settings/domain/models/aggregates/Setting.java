@@ -5,7 +5,7 @@ import com.example.spliteasybackend.settings.domain.models.valueobjects.DarkMode
 import com.example.spliteasybackend.settings.domain.models.valueobjects.Language;
 import com.example.spliteasybackend.settings.domain.models.valueobjects.NotificationsEnabled;
 import com.example.spliteasybackend.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
-import com.example.spliteasybackend.user.domain.models.aggregates.User;
+import com.example.spliteasybackend.iam.domain.model.aggregates.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -17,7 +17,6 @@ public class Setting extends AuditableAbstractAggregateRoot<Setting> {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 🔗 Relación con User
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -35,12 +34,10 @@ public class Setting extends AuditableAbstractAggregateRoot<Setting> {
     private NotificationsEnabled notificationsEnabled;
 
     protected Setting() {
-        // Constructor por defecto requerido por JPA
+        // Constructor requerido por JPA
     }
 
     public Setting(User user, CreateSettingCommand command) {
-        if (user == null) throw new IllegalArgumentException("El usuario no puede ser nulo");
-
         this.user = user;
         this.language = new Language(command.language());
         this.darkMode = new DarkMode(command.darkMode());

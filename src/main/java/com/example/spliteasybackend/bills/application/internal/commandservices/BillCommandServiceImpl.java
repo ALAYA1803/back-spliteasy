@@ -5,7 +5,7 @@ import com.example.spliteasybackend.bills.domain.models.commands.CreateBillComma
 import com.example.spliteasybackend.bills.domain.services.BillCommandService;
 import com.example.spliteasybackend.bills.infrastructure.persistance.jpa.repositories.BillRepository;
 import com.example.spliteasybackend.households.infrastructure.persistance.jpa.repositories.HouseholdRepository;
-import com.example.spliteasybackend.user.infrastructure.persistance.jpa.repositories.UserRepository;
+import com.example.spliteasybackend.iam.infrastructure.persistence.jpa.repositories.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;

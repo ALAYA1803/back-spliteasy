@@ -9,8 +9,9 @@ import com.example.spliteasybackend.contributions.infrastructure.persistance.jpa
 import com.example.spliteasybackend.householdmembers.infrastructure.persistance.jpa.repositories.HouseholdMemberRepository;
 import com.example.spliteasybackend.households.domain.models.aggregates.Household;
 import com.example.spliteasybackend.households.infrastructure.persistance.jpa.repositories.HouseholdRepository;
+import com.example.spliteasybackend.iam.infrastructure.persistence.jpa.repositories.UserRepository;
 import com.example.spliteasybackend.membercontributions.infrastructure.persistance.jpa.repositories.MemberContributionRepository;
-import com.example.spliteasybackend.user.infrastructure.persistance.jpa.repositories.UserRepository;
+
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;

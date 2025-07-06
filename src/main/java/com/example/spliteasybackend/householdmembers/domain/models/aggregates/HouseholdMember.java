@@ -2,7 +2,7 @@ package com.example.spliteasybackend.householdmembers.domain.models.aggregates;
 
 import com.example.spliteasybackend.households.domain.models.aggregates.Household;
 import com.example.spliteasybackend.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
-import com.example.spliteasybackend.user.domain.models.aggregates.User;
+import com.example.spliteasybackend.iam.domain.model.aggregates.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -23,7 +23,7 @@ public class HouseholdMember extends AuditableAbstractAggregateRoot<HouseholdMem
     private Household household;
 
     protected HouseholdMember() {
-        // Required by JPA
+        // Requerido por JPA
     }
 
     private HouseholdMember(Household household, User user) {
@@ -31,16 +31,13 @@ public class HouseholdMember extends AuditableAbstractAggregateRoot<HouseholdMem
         this.user = user;
     }
 
-    /**
-     * Lógica de negocio para crear un miembro válido
-     */
     public static HouseholdMember create(Household household, User user, boolean alreadyMember) {
         if (!user.isMiembro()) {
-            throw new IllegalArgumentException("Only users with role 'MIEMBRO' can join a household.");
+            throw new IllegalArgumentException("Solo los usuarios con rol 'MIEMBRO' pueden unirse a un hogar.");
         }
 
         if (alreadyMember) {
-            throw new IllegalStateException("User is already a member of this household.");
+            throw new IllegalStateException("El usuario ya es miembro de este hogar.");
         }
 
         return new HouseholdMember(household, user);
