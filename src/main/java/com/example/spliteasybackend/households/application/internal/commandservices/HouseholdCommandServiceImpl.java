@@ -4,7 +4,8 @@ import com.example.spliteasybackend.households.domain.models.aggregates.Househol
 import com.example.spliteasybackend.households.domain.models.commands.CreateHouseholdCommand;
 import com.example.spliteasybackend.households.domain.services.HouseholdCommandService;
 import com.example.spliteasybackend.households.infrastructure.persistance.jpa.repositories.HouseholdRepository;
-import com.example.spliteasybackend.user.infrastructure.persistance.jpa.repositories.UserRepository;
+
+import com.example.spliteasybackend.iam.infrastructure.persistence.jpa.repositories.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;

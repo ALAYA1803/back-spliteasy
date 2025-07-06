@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,6 +34,7 @@ public class BillsController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('ROLE_REPRESENTANTE')")
     @Operation(summary = "Create a bill")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Bill created"),
@@ -78,6 +80,7 @@ public class BillsController {
     }
 
     @DeleteMapping("/{billId}")
+    @PreAuthorize("hasAuthority('ROLE_REPRESENTANTE')")
     @Operation(summary = "Delete bill by ID")
     public ResponseEntity<Void> deleteBillById(@PathVariable Long billId) {
         boolean deleted = billCommandService.delete(billId);

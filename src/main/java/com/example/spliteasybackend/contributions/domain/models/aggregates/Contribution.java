@@ -5,11 +5,12 @@ import com.example.spliteasybackend.contributions.domain.models.commands.CreateC
 import com.example.spliteasybackend.contributions.domain.models.valueobjects.Strategy;
 import com.example.spliteasybackend.householdmembers.domain.models.aggregates.HouseholdMember;
 import com.example.spliteasybackend.households.domain.models.aggregates.Household;
+import com.example.spliteasybackend.iam.infrastructure.persistence.jpa.repositories.UserRepository;
 import com.example.spliteasybackend.membercontributions.domain.models.aggregates.MemberContribution;
 import com.example.spliteasybackend.membercontributions.infrastructure.persistance.jpa.repositories.MemberContributionRepository;
 import com.example.spliteasybackend.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
-import com.example.spliteasybackend.user.domain.models.aggregates.User;
-import com.example.spliteasybackend.user.infrastructure.persistance.jpa.repositories.UserRepository;
+import com.example.spliteasybackend.iam.domain.model.aggregates.User;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -59,23 +60,17 @@ public class Contribution extends AuditableAbstractAggregateRoot<Contribution> {
     }
 
     public static Contribution create(CreateContributionCommand command, Bill bill, Household household) {
-        if (command.description() == null || command.description().isBlank()) {
-            throw new IllegalArgumentException("La descripción no puede estar vacía.");
-        }
-
-        if (command.fechaLimite() == null || command.fechaLimite().isBefore(LocalDate.now())) {
-            throw new IllegalArgumentException("La fecha límite debe ser una fecha futura.");
-        }
-
-        if (command.strategy() == null) {
-            throw new IllegalArgumentException("Debe especificarse una estrategia de contribución.");
-        }
-
         if (!bill.getHousehold().getId().equals(household.getId())) {
             throw new IllegalArgumentException("El bill no pertenece al household indicado.");
         }
 
-        return new Contribution(bill, household, command.description(), command.fechaLimite(), command.strategy());
+        return new Contribution(
+                bill,
+                household,
+                command.description(),
+                command.fechaLimite(),
+                command.strategy()
+        );
     }
 
     public void update(CreateContributionCommand command, Bill bill, Household household) {

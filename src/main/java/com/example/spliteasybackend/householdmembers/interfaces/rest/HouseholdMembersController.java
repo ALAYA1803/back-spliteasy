@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,6 +35,7 @@ public class HouseholdMembersController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('ROLE_REPRESENTANTE')")
     @Operation(summary = "Create a household member")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Household member created"),
@@ -81,6 +83,7 @@ public class HouseholdMembersController {
     }
 
     @DeleteMapping("/{memberId}")
+    @PreAuthorize("hasAuthority('ROLE_REPRESENTANTE')")
     @Operation(summary = "Delete household member by ID")
     public ResponseEntity<Void> deleteHouseholdMemberById(@PathVariable Long memberId) {
         boolean deleted = commandService.delete(memberId);

@@ -1,11 +1,11 @@
 package com.example.spliteasybackend.settings.application.internal.commandservices;
 
+import com.example.spliteasybackend.iam.infrastructure.persistence.jpa.repositories.UserRepository;
 import com.example.spliteasybackend.settings.domain.models.aggregates.Setting;
 import com.example.spliteasybackend.settings.domain.models.commands.CreateSettingCommand;
 import com.example.spliteasybackend.settings.domain.services.SettingCommandService;
 import com.example.spliteasybackend.settings.infrastructure.persistance.jpa.repositories.SettingRepository;
-import com.example.spliteasybackend.user.domain.models.aggregates.User;
-import com.example.spliteasybackend.user.infrastructure.persistance.jpa.repositories.UserRepository;
+import com.example.spliteasybackend.iam.domain.model.aggregates.User;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;

@@ -3,12 +3,12 @@ package com.example.spliteasybackend.membercontributions.application.internal.co
 
 import com.example.spliteasybackend.contributions.domain.models.aggregates.Contribution;
 import com.example.spliteasybackend.contributions.infrastructure.persistance.jpa.repositories.ContributionRepository;
+import com.example.spliteasybackend.iam.infrastructure.persistence.jpa.repositories.UserRepository;
 import com.example.spliteasybackend.membercontributions.domain.models.aggregates.MemberContribution;
 import com.example.spliteasybackend.membercontributions.domain.models.commands.CreateMemberContributionCommand;
 import com.example.spliteasybackend.membercontributions.domain.services.MemberContributionCommandService;
 import com.example.spliteasybackend.membercontributions.infrastructure.persistance.jpa.repositories.MemberContributionRepository;
-import com.example.spliteasybackend.user.domain.models.aggregates.User;
-import com.example.spliteasybackend.user.infrastructure.persistance.jpa.repositories.UserRepository;
+import com.example.spliteasybackend.iam.domain.model.aggregates.User;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;

@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,6 +34,7 @@ public class SettingsController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('ROLE_REPRESENTANTE')")
     @Operation(summary = "Create a setting")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Setting created"),
@@ -78,6 +80,7 @@ public class SettingsController {
     }
 
     @DeleteMapping("/{settingId}")
+    @PreAuthorize("hasAuthority('ROLE_REPRESENTANTE')")
     @Operation(summary = "Delete setting by ID")
     public ResponseEntity<Void> deleteSettingById(@PathVariable Long settingId) {
         boolean deleted = settingCommandService.delete(settingId);

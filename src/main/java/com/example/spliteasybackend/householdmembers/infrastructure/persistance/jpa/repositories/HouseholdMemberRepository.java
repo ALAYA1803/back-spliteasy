@@ -2,7 +2,7 @@ package com.example.spliteasybackend.householdmembers.infrastructure.persistance
 
 import com.example.spliteasybackend.householdmembers.domain.models.aggregates.HouseholdMember;
 import com.example.spliteasybackend.households.domain.models.aggregates.Household;
-import com.example.spliteasybackend.user.domain.models.aggregates.User;
+import com.example.spliteasybackend.iam.domain.model.aggregates.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

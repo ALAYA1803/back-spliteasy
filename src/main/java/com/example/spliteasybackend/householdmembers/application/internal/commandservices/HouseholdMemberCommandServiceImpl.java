@@ -5,7 +5,7 @@ import com.example.spliteasybackend.householdmembers.domain.models.commands.Crea
 import com.example.spliteasybackend.householdmembers.domain.services.HouseholdMemberCommandService;
 import com.example.spliteasybackend.householdmembers.infrastructure.persistance.jpa.repositories.HouseholdMemberRepository;
 import com.example.spliteasybackend.households.infrastructure.persistance.jpa.repositories.HouseholdRepository;
-import com.example.spliteasybackend.user.infrastructure.persistance.jpa.repositories.UserRepository;
+import com.example.spliteasybackend.iam.infrastructure.persistence.jpa.repositories.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
