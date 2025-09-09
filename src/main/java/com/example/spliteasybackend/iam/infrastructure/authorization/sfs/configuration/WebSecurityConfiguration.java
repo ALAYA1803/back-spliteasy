@@ -93,7 +93,7 @@ public class WebSecurityConfiguration {
      */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.cors(configurer -> configurer.configurationSource(_ -> {
+        http.cors(configurer -> configurer.configurationSource(request -> {
             var cors = new CorsConfiguration();
             cors.setAllowedOrigins(List.of("*"));
             cors.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
@@ -104,10 +104,8 @@ public class WebSecurityConfiguration {
                 .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(unauthorizedRequestHandler))
                 .sessionManagement(customizer -> customizer.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
-                        // ✅ PERMITIR SIGN-UP Y SIGN-IN EXPLÍCITAMENTE
                         .requestMatchers(HttpMethod.POST, "/api/v1/authentication/sign-up").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/authentication/sign-in").permitAll()
-                        // ✅ OTROS PÚBLICOS
                         .requestMatchers(
                                 "/api/v1/roles",
                                 "/v3/api-docs/**",
@@ -116,16 +114,12 @@ public class WebSecurityConfiguration {
                                 "/swagger-resources/**",
                                 "/webjars/**"
                         ).permitAll()
-
-                        // 🔐 ENDPOINTS protegidos por rol REPRESENTANTE
                         .requestMatchers("/api/v1/bills/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/contributions/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/households/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/household-members/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/member-contributions/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/settings/**").hasAuthority("ROLE_REPRESENTANTE")
-
-                        // 🔐 Todo lo demás requiere autenticación
                         .anyRequest().authenticated());
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(authorizationRequestFilter(), UsernamePasswordAuthenticationFilter.class);
