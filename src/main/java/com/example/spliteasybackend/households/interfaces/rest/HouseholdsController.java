@@ -52,7 +52,6 @@ public class HouseholdsController {
     @Operation(summary = "Get all households")
     public ResponseEntity<List<HouseholdResource>> getAllHouseholds() {
         var results = queryService.handle(new GetAllHouseholdsQuery());
-        if (results.isEmpty()) return ResponseEntity.notFound().build();
         var resources = results.stream()
                 .map(HouseholdResourceFromEntityAssembler::toResourceFromEntity)
                 .toList();
