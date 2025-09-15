@@ -9,7 +9,7 @@ public record CreateContributionResource(
         String description,
         String strategy,
         LocalDate fechaLimite,
-        List<Long> memberIds
+        java.util.List<Long> memberIds
 ) {
     public CreateContributionResource {
         if (billId == null || billId <= 0)

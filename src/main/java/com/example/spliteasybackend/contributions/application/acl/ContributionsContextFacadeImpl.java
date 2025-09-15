@@ -9,6 +9,7 @@ import com.example.spliteasybackend.contributions.interfaces.acl.ContributionsCo
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 public class ContributionsContextFacadeImpl implements ContributionsContextFacade {
@@ -23,13 +24,18 @@ public class ContributionsContextFacadeImpl implements ContributionsContextFacad
 
     @Override
     public Long createContribution(Long billId, Long householdId, String description, LocalDate fechaLimite, String strategy) {
+        return createContribution(billId, householdId, description, fechaLimite, strategy, null);
+    }
+
+    @Override
+    public Long createContribution(Long billId, Long householdId, String description, LocalDate fechaLimite, String strategy, List<Long> memberIds) {
         var command = new CreateContributionCommand(
                 billId,
                 householdId,
                 description,
                 fechaLimite,
                 Strategy.valueOf(strategy.toUpperCase()),
-                null
+                memberIds
         );
         var result = commandService.handle(command);
         return result.map(c -> c.getId()).orElse(0L);

@@ -9,9 +9,9 @@ public record CreateContributionCommand(
         Long billId,
         Long householdId,
         String description,
-        LocalDate fechaLimite,
-        Strategy strategy,
-        List<Long> memberIds
+        java.time.LocalDate fechaLimite,
+        com.example.spliteasybackend.contributions.domain.models.valueobjects.Strategy strategy,
+        java.util.List<Long> memberIds
 ) {
     public CreateContributionCommand {
         if (billId == null || billId <= 0)

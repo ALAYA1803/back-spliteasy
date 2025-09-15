@@ -58,7 +58,6 @@ public class ContributionCommandServiceImpl implements ContributionCommandServic
         contribution = contributionRepository.save(contribution);
 
         List<HouseholdMember> members = resolveMembersForDistribution(household, command.memberIds());
-
         contribution.distribute(members, userRepository, memberContributionRepository);
 
         return Optional.of(contribution);
@@ -99,34 +98,28 @@ public class ContributionCommandServiceImpl implements ContributionCommandServic
 
 
     private List<HouseholdMember> resolveMembersForDistribution(Household household, List<Long> memberIds) {
-        List<HouseholdMember> members;
-
-        if (memberIds == null || memberIds.isEmpty()) {
-            members = memberRepository.findAllByHousehold_Id(household.getId());
-            if (members.isEmpty()) {
-                throw new IllegalStateException("El household no tiene miembros para distribuir la contribución.");
-            }
-            return members;
+        if (memberIds == null) {
+            var all = memberRepository.findAllByHousehold_Id(household.getId());
+            if (all.isEmpty()) throw new IllegalStateException("El household no tiene miembros.");
+            return all;
         }
 
-        members = memberRepository.findAllById(memberIds);
+        if (memberIds.isEmpty()) {
+            throw new IllegalArgumentException("Debe seleccionar al menos un miembro.");
+        }
+
+        var members = memberRepository.findAllById(memberIds);
         if (members.isEmpty()) {
             throw new IllegalArgumentException("No se encontraron miembros válidos con los IDs especificados.");
         }
 
-        boolean allBelong = members.stream()
-                .allMatch(m -> m.getHousehold() != null
-                        && Objects.equals(m.getHousehold().getId(), household.getId()));
+        boolean allBelong = members.stream().allMatch(m -> m.getHousehold() != null
+                && m.getHousehold().getId().equals(household.getId()));
+        if (!allBelong) throw new IllegalArgumentException("Uno o más miembros no pertenecen al household indicado.");
 
-        if (!allBelong) {
-            throw new IllegalArgumentException("Uno o más miembros seleccionados no pertenecen al household indicado.");
-        }
-
-        long foundIds = members.stream().map(HouseholdMember::getId).distinct().count();
-        long requestedIds = memberIds.stream().distinct().count();
-        if (foundIds != requestedIds) {
-            throw new IllegalArgumentException("Algunos IDs de miembros seleccionados no existen.");
-        }
+        long found = members.stream().map(HouseholdMember::getId).distinct().count();
+        long requested = memberIds.stream().distinct().count();
+        if (found != requested) throw new IllegalArgumentException("Algunos IDs de miembros seleccionados no existen.");
 
         return members;
     }
