@@ -76,7 +76,6 @@ public class ContributionCommandServiceImpl implements ContributionCommandServic
         contribution.update(command, bill, household);
         contribution = contributionRepository.save(contribution);
 
-        // limpiar hijos y redistribuir
         memberContributionRepository.deleteByContribution_Id(contribution.getId());
         var members = memberRepository.findAllByHousehold_Id(household.getId());
         contribution.distribute(members, userRepository, memberContributionRepository);
@@ -88,12 +87,9 @@ public class ContributionCommandServiceImpl implements ContributionCommandServic
     @Transactional
     public boolean delete(Long id) {
         if (!contributionRepository.existsById(id)) return false;
-
-        // 1) borrar hijos
         memberContributionRepository.deleteByContribution_Id(id);
-        // 2) borrar padre
         contributionRepository.deleteById(id);
-
         return true;
     }
+
 }

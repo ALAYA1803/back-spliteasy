@@ -13,10 +13,13 @@ import java.time.LocalDateTime;
 
 @Entity
 @Getter
+@Table(
+        name = "member_contributions",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"contribution_id", "member_id"})
+)
 public class MemberContribution extends AuditableAbstractAggregateRoot<MemberContribution> {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
@@ -53,11 +56,6 @@ public class MemberContribution extends AuditableAbstractAggregateRoot<MemberCon
         this.pagadoEn = command.pagadoEn();
     }
 
-    public Long getContributionId() {
-        return (contribution != null) ? contribution.getId() : null;
-    }
-
-    public Long getMemberId() {
-        return (member != null) ? member.getId() : null;
-    }
+    public Long getContributionId() { return contribution != null ? contribution.getId() : null; }
+    public Long getMemberId()       { return member != null ? member.getId() : null; }
 }
