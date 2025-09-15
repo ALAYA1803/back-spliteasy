@@ -76,16 +76,12 @@ public class WebSecurityConfiguration {
                                 "/swagger-resources/**",
                                 "/webjars/**"
                         ).permitAll()
-                        // --- INICIO DE LA CORRECCIÓN ---
-                        // Permite las peticiones GET a CUALQUIER usuario autenticado.
-                        // Las anotaciones @PreAuthorize en el controlador se encargarán del resto (POST, PUT, DELETE).
                         .requestMatchers(HttpMethod.GET, "/api/v1/households", "/api/v1/households/**").authenticated()
                         .requestMatchers("/api/v1/bills/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/contributions/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/household-members/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/member-contributions/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/settings/**").hasAuthority("ROLE_REPRESENTANTE")
-                        // --- FIN DE LA CORRECCIÓN ---
                         .anyRequest().authenticated());
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(authorizationRequestFilter(), UsernamePasswordAuthenticationFilter.class);

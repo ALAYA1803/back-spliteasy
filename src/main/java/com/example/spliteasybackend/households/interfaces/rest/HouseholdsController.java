@@ -78,7 +78,6 @@ public class HouseholdsController {
         var resourceUpdated = HouseholdResourceFromEntityAssembler.toResourceFromEntity(updated.get());
         return ResponseEntity.ok(resourceUpdated);
     }
-
     @DeleteMapping("/{householdId}")
     @PreAuthorize("hasAuthority('ROLE_REPRESENTANTE')")
     @Operation(summary = "Delete household by ID")
