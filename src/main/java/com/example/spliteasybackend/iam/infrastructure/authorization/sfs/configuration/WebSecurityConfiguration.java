@@ -19,8 +19,6 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
@@ -37,12 +35,16 @@ public class WebSecurityConfiguration {
             @Qualifier("defaultUserDetailsService") UserDetailsService userDetailsService,
             BearerTokenService tokenService,
             BCryptHashingService hashingService,
-            AuthenticationEntryPoint authenticationEntryPoint
-    ) {
+            AuthenticationEntryPoint authenticationEntryPoint) {
         this.userDetailsService = userDetailsService;
         this.tokenService = tokenService;
         this.hashingService = hashingService;
         this.unauthorizedRequestHandler = authenticationEntryPoint;
+    }
+
+    @Bean
+    public BearerAuthorizationRequestFilter authorizationRequestFilter() {
+        return new BearerAuthorizationRequestFilter(tokenService, userDetailsService);
     }
 
     @Bean
@@ -59,58 +61,48 @@ public class WebSecurityConfiguration {
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return hashingService;
-    }
-
-    @Bean
-    public BearerAuthorizationRequestFilter authorizationRequestFilter() {
-        return new BearerAuthorizationRequestFilter(tokenService, userDetailsService);
-    }
-
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        var cors = new CorsConfiguration();
-        cors.setAllowedOriginPatterns(List.of("*"));
-        cors.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        cors.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "X-Requested-With", "Origin"));
-        cors.setExposedHeaders(List.of("Authorization", "Content-Type"));
-        cors.setAllowCredentials(true);
-
-        var source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", cors);
-        return source;
-    }
+    public PasswordEncoder passwordEncoder() { return hashingService; }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .cors(c -> c.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())
+
+        http.cors(cors -> cors.configurationSource(req -> {
+            var c = new CorsConfiguration();
+            c.setAllowedOrigins(List.of("*"));
+            c.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+            c.setAllowedHeaders(List.of("*"));
+            c.setExposedHeaders(List.of("Authorization", "Content-Type"));
+            c.setAllowCredentials(false);
+            return c;
+        }));
+
+        http.csrf(csrf -> csrf.disable())
                 .exceptionHandling(e -> e.authenticationEntryPoint(unauthorizedRequestHandler))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/authentication/sign-up", "/api/v1/authentication/sign-in").permitAll()
-                        .requestMatchers(
-                                "/api/v1/roles",
-                                "/v3/api-docs/**",
-                                "/swagger-ui.html",
-                                "/swagger-ui/**",
-                                "/swagger-resources/**",
-                                "/webjars/**"
-                        ).permitAll()
+                        .requestMatchers("/error").permitAll()
+
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/authentication/sign-in",
+                                "/api/v1/authentication/sign-up").permitAll()
+
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui.html",
+                                "/swagger-ui/**", "/swagger-resources/**", "/webjars/**").permitAll()
+
                         .requestMatchers(HttpMethod.GET, "/api/v1/households/**").authenticated()
+
                         .requestMatchers("/api/v1/bills/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/contributions/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/household-members/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/member-contributions/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/settings/**").hasAuthority("ROLE_REPRESENTANTE")
+
                         .anyRequest().authenticated()
-                )
-                .authenticationProvider(authenticationProvider())
-                .addFilterBefore(authorizationRequestFilter(), UsernamePasswordAuthenticationFilter.class);
+                );
+
+        http.authenticationProvider(authenticationProvider());
+        http.addFilterBefore(authorizationRequestFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

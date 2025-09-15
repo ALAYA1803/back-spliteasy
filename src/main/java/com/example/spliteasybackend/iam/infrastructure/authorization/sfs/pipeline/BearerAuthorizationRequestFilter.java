@@ -1,7 +1,7 @@
 package com.example.spliteasybackend.iam.infrastructure.authorization.sfs.pipeline;
 
+import com.example.spliteasybackend.iam.infrastructure.authorization.sfs.model.UsernamePasswordAuthenticationTokenBuilder;
 import com.example.spliteasybackend.iam.infrastructure.tokens.jwt.BearerTokenService;
-import com.example.spliteasybackend.iam.infrastructure.tokens.jwt.services.TokenServiceImpl;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,69 +10,62 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.lang.NonNull;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.stream.Collectors;
 
 public class BearerAuthorizationRequestFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(BearerAuthorizationRequestFilter.class);
 
     private final BearerTokenService tokenService;
-
-    @Qualifier("defaultUserDetailsService")
     private final UserDetailsService userDetailsService;
 
-    public BearerAuthorizationRequestFilter(BearerTokenService tokenService, UserDetailsService userDetailsService) {
+    public BearerAuthorizationRequestFilter(
+            BearerTokenService tokenService,
+            @Qualifier("defaultUserDetailsService") UserDetailsService userDetailsService) {
         this.tokenService = tokenService;
         this.userDetailsService = userDetailsService;
     }
 
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request,
-                                    @NonNull HttpServletResponse response,
-                                    @NonNull FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain
+    ) throws ServletException, IOException {
 
-        String path = request.getRequestURI();
-        if (path.startsWith("/api/v1/authentication")
-                || path.startsWith("/v3/api-docs")
-                || path.startsWith("/swagger-ui")
-                || path.startsWith("/swagger-resources")
-                || path.startsWith("/webjars")) {
+        final String uri = request.getRequestURI();
+
+        if (uri.startsWith("/api/v1/authentication")
+                || uri.startsWith("/v3/api-docs")
+                || uri.startsWith("/swagger-ui")
+                || uri.startsWith("/swagger-resources")
+                || uri.startsWith("/webjars")
+                || uri.equals("/error")) {
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
-            String token = tokenService.getBearerTokenFrom(request);
-            if (token != null && tokenService.validateToken(token)) {
-                String username = tokenService.getUsernameFromToken(token);
-                List<String> roles = (tokenService instanceof TokenServiceImpl tsi)
-                        ? tsi.getRolesFromToken(token)
-                        : List.of();
+            final String raw = tokenService.getBearerTokenFrom(request);
+            if (raw != null && tokenService.validateToken(raw)) {
+                final String username = tokenService.getUsernameFromToken(raw);
+                var userDetails = userDetailsService.loadUserByUsername(username);
 
-                if (!roles.isEmpty()) {
-                    var authorities = roles.stream()
-                            .map(SimpleGrantedAuthority::new)
-                            .collect(Collectors.toList());
+                var auth = UsernamePasswordAuthenticationTokenBuilder.build(userDetails, request);
+                SecurityContextHolder.getContext().setAuthentication(auth);
 
-                    var auth = new UsernamePasswordAuthenticationToken(username, null, authorities);
-                    SecurityContextHolder.getContext().setAuthentication(auth);
-                } else {
-                    var userDetails = userDetailsService.loadUserByUsername(username);
-                    var auth = new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities());
-                    SecurityContextHolder.getContext().setAuthentication(auth);
+                if (log.isDebugEnabled()) {
+                    log.debug("JWT OK: user={}, authorities={}", username, auth.getAuthorities());
                 }
+            } else if (log.isDebugEnabled()) {
+                log.debug("No/invalid JWT on {}", uri);
             }
         } catch (Exception e) {
-            log.error("JWT filter error: {}", e.getMessage());
+            log.error("JWT filter error on {}: {}", uri, e.getMessage(), e);
         }
 
         filterChain.doFilter(request, response);

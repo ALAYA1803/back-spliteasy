@@ -46,7 +46,7 @@ public class TokenServiceImpl implements TokenService, BearerTokenService {
     }
     @Override
     public String generateToken(String username) {
-        return buildToken(username, null, null);
+        return buildToken(username, null, java.util.List.of());
     }
     public String generateToken(String username, Long userId, Collection<? extends GrantedAuthority> authorities) {
         return buildToken(username, userId, authorities);
