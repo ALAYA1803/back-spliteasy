@@ -1,13 +1,15 @@
 package com.example.spliteasybackend.contributions.interfaces.rest.resources;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public record CreateContributionResource(
         Long billId,
         Long householdId,
         String description,
         String strategy,
-        LocalDate fechaLimite
+        LocalDate fechaLimite,
+        List<Long> memberIds
 ) {
     public CreateContributionResource {
         if (billId == null || billId <= 0)

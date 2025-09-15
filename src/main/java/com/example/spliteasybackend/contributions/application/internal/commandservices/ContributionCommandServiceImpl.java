@@ -6,6 +6,7 @@ import com.example.spliteasybackend.contributions.domain.models.aggregates.Contr
 import com.example.spliteasybackend.contributions.domain.models.commands.CreateContributionCommand;
 import com.example.spliteasybackend.contributions.domain.services.ContributionCommandService;
 import com.example.spliteasybackend.contributions.infrastructure.persistance.jpa.repositories.ContributionRepository;
+import com.example.spliteasybackend.householdmembers.domain.models.aggregates.HouseholdMember;
 import com.example.spliteasybackend.householdmembers.infrastructure.persistance.jpa.repositories.HouseholdMemberRepository;
 import com.example.spliteasybackend.households.domain.models.aggregates.Household;
 import com.example.spliteasybackend.households.infrastructure.persistance.jpa.repositories.HouseholdRepository;
@@ -14,6 +15,8 @@ import com.example.spliteasybackend.membercontributions.infrastructure.persistan
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -54,7 +57,8 @@ public class ContributionCommandServiceImpl implements ContributionCommandServic
         Contribution contribution = Contribution.create(command, bill, household);
         contribution = contributionRepository.save(contribution);
 
-        var members = memberRepository.findAllByHousehold_Id(household.getId());
+        List<HouseholdMember> members = resolveMembersForDistribution(household, command.memberIds());
+
         contribution.distribute(members, userRepository, memberContributionRepository);
 
         return Optional.of(contribution);
@@ -66,18 +70,19 @@ public class ContributionCommandServiceImpl implements ContributionCommandServic
         var contributionOpt = contributionRepository.findById(id);
         if (contributionOpt.isEmpty()) return Optional.empty();
 
-        var bill = billRepository.findById(command.billId())
+        Bill bill = billRepository.findById(command.billId())
                 .orElseThrow(() -> new IllegalArgumentException("Bill no encontrado"));
 
-        var household = householdRepository.findById(command.householdId())
+        Household household = householdRepository.findById(command.householdId())
                 .orElseThrow(() -> new IllegalArgumentException("Household no encontrado"));
 
-        var contribution = contributionOpt.get();
+        Contribution contribution = contributionOpt.get();
         contribution.update(command, bill, household);
         contribution = contributionRepository.save(contribution);
 
         memberContributionRepository.deleteByContribution_Id(contribution.getId());
-        var members = memberRepository.findAllByHousehold_Id(household.getId());
+
+        List<HouseholdMember> members = resolveMembersForDistribution(household, command.memberIds());
         contribution.distribute(members, userRepository, memberContributionRepository);
 
         return Optional.of(contribution);
@@ -92,4 +97,37 @@ public class ContributionCommandServiceImpl implements ContributionCommandServic
         return true;
     }
 
+
+    private List<HouseholdMember> resolveMembersForDistribution(Household household, List<Long> memberIds) {
+        List<HouseholdMember> members;
+
+        if (memberIds == null || memberIds.isEmpty()) {
+            members = memberRepository.findAllByHousehold_Id(household.getId());
+            if (members.isEmpty()) {
+                throw new IllegalStateException("El household no tiene miembros para distribuir la contribución.");
+            }
+            return members;
+        }
+
+        members = memberRepository.findAllById(memberIds);
+        if (members.isEmpty()) {
+            throw new IllegalArgumentException("No se encontraron miembros válidos con los IDs especificados.");
+        }
+
+        boolean allBelong = members.stream()
+                .allMatch(m -> m.getHousehold() != null
+                        && Objects.equals(m.getHousehold().getId(), household.getId()));
+
+        if (!allBelong) {
+            throw new IllegalArgumentException("Uno o más miembros seleccionados no pertenecen al household indicado.");
+        }
+
+        long foundIds = members.stream().map(HouseholdMember::getId).distinct().count();
+        long requestedIds = memberIds.stream().distinct().count();
+        if (foundIds != requestedIds) {
+            throw new IllegalArgumentException("Algunos IDs de miembros seleccionados no existen.");
+        }
+
+        return members;
+    }
 }

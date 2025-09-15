@@ -3,13 +3,15 @@ package com.example.spliteasybackend.contributions.domain.models.commands;
 import com.example.spliteasybackend.contributions.domain.models.valueobjects.Strategy;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public record CreateContributionCommand(
         Long billId,
         Long householdId,
         String description,
         LocalDate fechaLimite,
-        Strategy strategy
+        Strategy strategy,
+        List<Long> memberIds
 ) {
     public CreateContributionCommand {
         if (billId == null || billId <= 0)

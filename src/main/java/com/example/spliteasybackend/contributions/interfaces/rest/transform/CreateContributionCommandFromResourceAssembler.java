@@ -12,7 +12,8 @@ public class CreateContributionCommandFromResourceAssembler {
                 resource.householdId(),
                 resource.description(),
                 resource.fechaLimite(),
-                Strategy.valueOf(resource.strategy().toUpperCase())
+                Strategy.valueOf(resource.strategy().toUpperCase()),
+                resource.memberIds()
         );
     }
 }
