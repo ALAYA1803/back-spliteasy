@@ -19,6 +19,8 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
@@ -31,22 +33,29 @@ public class WebSecurityConfiguration {
     private final BCryptHashingService hashingService;
     private final AuthenticationEntryPoint unauthorizedRequestHandler;
 
-    @Bean
-    public BearerAuthorizationRequestFilter authorizationRequestFilter() {
-        return new BearerAuthorizationRequestFilter(tokenService, userDetailsService);
+    public WebSecurityConfiguration(
+            @Qualifier("defaultUserDetailsService") UserDetailsService userDetailsService,
+            BearerTokenService tokenService,
+            BCryptHashingService hashingService,
+            AuthenticationEntryPoint authenticationEntryPoint
+    ) {
+        this.userDetailsService = userDetailsService;
+        this.tokenService = tokenService;
+        this.hashingService = hashingService;
+        this.unauthorizedRequestHandler = authenticationEntryPoint;
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration cfg) throws Exception {
+        return cfg.getAuthenticationManager();
     }
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
-        var authenticationProvider = new DaoAuthenticationProvider();
-        authenticationProvider.setUserDetailsService(userDetailsService);
-        authenticationProvider.setPasswordEncoder(hashingService);
-        return authenticationProvider;
+        var provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(hashingService);
+        return provider;
     }
 
     @Bean
@@ -55,18 +64,34 @@ public class WebSecurityConfiguration {
     }
 
     @Bean
+    public BearerAuthorizationRequestFilter authorizationRequestFilter() {
+        return new BearerAuthorizationRequestFilter(tokenService, userDetailsService);
+    }
+
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        var cors = new CorsConfiguration();
+        cors.setAllowedOriginPatterns(List.of("*"));
+        cors.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        cors.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "X-Requested-With", "Origin"));
+        cors.setExposedHeaders(List.of("Authorization", "Content-Type"));
+        cors.setAllowCredentials(true);
+
+        var source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", cors);
+        return source;
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.cors(configurer -> configurer.configurationSource(request -> {
-            var cors = new CorsConfiguration();
-            cors.setAllowedOrigins(List.of("*"));
-            cors.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
-            cors.setAllowedHeaders(List.of("*"));
-            return cors;
-        }));
-        http.csrf(csrfConfigurer -> csrfConfigurer.disable())
-                .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(unauthorizedRequestHandler))
-                .sessionManagement(customizer -> customizer.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(authorizeRequests -> authorizeRequests
+        http
+                .cors(c -> c.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
+                .exceptionHandling(e -> e.authenticationEntryPoint(unauthorizedRequestHandler))
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/authentication/sign-up", "/api/v1/authentication/sign-in").permitAll()
                         .requestMatchers(
                                 "/api/v1/roles",
@@ -76,22 +101,17 @@ public class WebSecurityConfiguration {
                                 "/swagger-resources/**",
                                 "/webjars/**"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/households", "/api/v1/households/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/households/**").authenticated()
                         .requestMatchers("/api/v1/bills/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/contributions/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/household-members/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/member-contributions/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/settings/**").hasAuthority("ROLE_REPRESENTANTE")
-                        .anyRequest().authenticated());
-        http.authenticationProvider(authenticationProvider());
-        http.addFilterBefore(authorizationRequestFilter(), UsernamePasswordAuthenticationFilter.class);
-        return http.build();
-    }
+                        .anyRequest().authenticated()
+                )
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(authorizationRequestFilter(), UsernamePasswordAuthenticationFilter.class);
 
-    public WebSecurityConfiguration(@Qualifier("defaultUserDetailsService") UserDetailsService userDetailsService, BearerTokenService tokenService, BCryptHashingService hashingService, AuthenticationEntryPoint authenticationEntryPoint) {
-        this.userDetailsService = userDetailsService;
-        this.tokenService = tokenService;
-        this.hashingService = hashingService;
-        this.unauthorizedRequestHandler = authenticationEntryPoint;
+        return http.build();
     }
 }

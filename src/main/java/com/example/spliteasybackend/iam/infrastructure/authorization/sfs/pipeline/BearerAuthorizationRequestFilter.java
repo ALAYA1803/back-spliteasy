@@ -1,7 +1,7 @@
 package com.example.spliteasybackend.iam.infrastructure.authorization.sfs.pipeline;
 
-import com.example.spliteasybackend.iam.infrastructure.authorization.sfs.model.UsernamePasswordAuthenticationTokenBuilder;
 import com.example.spliteasybackend.iam.infrastructure.tokens.jwt.BearerTokenService;
+import com.example.spliteasybackend.iam.infrastructure.tokens.jwt.services.TokenServiceImpl;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,7 +10,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.lang.NonNull;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -20,7 +22,8 @@ import java.util.stream.Collectors;
 
 public class BearerAuthorizationRequestFilter extends OncePerRequestFilter {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(BearerAuthorizationRequestFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(BearerAuthorizationRequestFilter.class);
+
     private final BearerTokenService tokenService;
 
     @Qualifier("defaultUserDetailsService")
@@ -32,8 +35,9 @@ public class BearerAuthorizationRequestFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         String path = request.getRequestURI();
         if (path.startsWith("/api/v1/authentication")
@@ -49,28 +53,26 @@ public class BearerAuthorizationRequestFilter extends OncePerRequestFilter {
             String token = tokenService.getBearerTokenFrom(request);
             if (token != null && tokenService.validateToken(token)) {
                 String username = tokenService.getUsernameFromToken(token);
-                List<String> roles =
-                        (tokenService instanceof com.example.spliteasybackend.iam.infrastructure.tokens.jwt.services.TokenServiceImpl tsi)
-                                ? ((com.example.spliteasybackend.iam.infrastructure.tokens.jwt.services.TokenServiceImpl) tokenService).getRolesFromToken(token)
-                                : List.of();
+                List<String> roles = (tokenService instanceof TokenServiceImpl tsi)
+                        ? tsi.getRolesFromToken(token)
+                        : List.of();
 
                 if (!roles.isEmpty()) {
                     var authorities = roles.stream()
                             .map(SimpleGrantedAuthority::new)
                             .collect(Collectors.toList());
 
-                    var auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
-                            username, null, authorities
-                    );
-                    org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(auth);
+                    var auth = new UsernamePasswordAuthenticationToken(username, null, authorities);
+                    SecurityContextHolder.getContext().setAuthentication(auth);
                 } else {
                     var userDetails = userDetailsService.loadUserByUsername(username);
-                    org.springframework.security.core.context.SecurityContextHolder.getContext()
-                            .setAuthentication(UsernamePasswordAuthenticationTokenBuilder.build(userDetails, request));
+                    var auth = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
+                    SecurityContextHolder.getContext().setAuthentication(auth);
                 }
             }
         } catch (Exception e) {
-            LOGGER.debug("JWT filter: no se pudo autenticar con el token: {}", e.getMessage());
+            log.error("JWT filter error: {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);

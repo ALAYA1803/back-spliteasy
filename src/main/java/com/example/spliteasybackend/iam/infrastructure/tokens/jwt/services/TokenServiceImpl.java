@@ -36,6 +36,7 @@ public class TokenServiceImpl implements TokenService, BearerTokenService {
 
     @Value("${authorization.jwt.expiration.days}")
     private int expirationDays;
+
     @Override
     public String generateToken(Authentication authentication) {
         String username = authentication.getName();
@@ -45,9 +46,8 @@ public class TokenServiceImpl implements TokenService, BearerTokenService {
     }
     @Override
     public String generateToken(String username) {
-        return buildToken(username, null, List.of());
+        return buildToken(username, null, null);
     }
-
     public String generateToken(String username, Long userId, Collection<? extends GrantedAuthority> authorities) {
         return buildToken(username, userId, authorities);
     }
@@ -135,10 +135,18 @@ public class TokenServiceImpl implements TokenService, BearerTokenService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    private boolean isTokenPresentIn(String authorizationParameter) { return StringUtils.hasText(authorizationParameter); }
-    private boolean isBearerTokenIn(String authorizationParameter) { return authorizationParameter.startsWith(BEARER_TOKEN_PREFIX); }
-    private String extractTokenFrom(String authorizationHeaderParameter) { return authorizationHeaderParameter.substring(TOKEN_BEGIN_INDEX); }
-    private String getAuthorizationParameterFrom(HttpServletRequest request) { return request.getHeader(AUTHORIZATION_PARAMETER_NAME); }
+    private boolean isTokenPresentIn(String authorizationParameter) {
+        return StringUtils.hasText(authorizationParameter);
+    }
+    private boolean isBearerTokenIn(String authorizationParameter) {
+        return authorizationParameter.startsWith(BEARER_TOKEN_PREFIX);
+    }
+    private String extractTokenFrom(String authorizationHeaderParameter) {
+        return authorizationHeaderParameter.substring(TOKEN_BEGIN_INDEX);
+    }
+    private String getAuthorizationParameterFrom(HttpServletRequest request) {
+        return request.getHeader(AUTHORIZATION_PARAMETER_NAME);
+    }
 
     @Override
     public String getBearerTokenFrom(HttpServletRequest request) {
