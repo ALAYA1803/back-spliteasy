@@ -11,8 +11,8 @@ import com.example.spliteasybackend.households.domain.models.aggregates.Househol
 import com.example.spliteasybackend.households.infrastructure.persistance.jpa.repositories.HouseholdRepository;
 import com.example.spliteasybackend.iam.infrastructure.persistence.jpa.repositories.UserRepository;
 import com.example.spliteasybackend.membercontributions.infrastructure.persistance.jpa.repositories.MemberContributionRepository;
-
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -32,7 +32,8 @@ public class ContributionCommandServiceImpl implements ContributionCommandServic
             HouseholdRepository householdRepository,
             HouseholdMemberRepository memberRepository,
             UserRepository userRepository,
-            MemberContributionRepository memberContributionRepository) {
+            MemberContributionRepository memberContributionRepository
+    ) {
         this.contributionRepository = contributionRepository;
         this.billRepository = billRepository;
         this.householdRepository = householdRepository;
@@ -42,21 +43,17 @@ public class ContributionCommandServiceImpl implements ContributionCommandServic
     }
 
     @Override
+    @Transactional
     public Optional<Contribution> handle(CreateContributionCommand command) {
-        // Obtener bill y household por ID
         Bill bill = billRepository.findById(command.billId())
                 .orElseThrow(() -> new IllegalArgumentException("Bill no encontrado"));
 
         Household household = householdRepository.findById(command.householdId())
                 .orElseThrow(() -> new IllegalArgumentException("Household no encontrado"));
 
-        // Crear contribution con lógica de negocio
         Contribution contribution = Contribution.create(command, bill, household);
+        contribution = contributionRepository.save(contribution);
 
-        // Guardar contribution
-        contributionRepository.save(contribution);
-
-        // Distribuir los montos entre miembros
         var members = memberRepository.findAllByHousehold_Id(household.getId());
         contribution.distribute(members, userRepository, memberContributionRepository);
 
@@ -64,22 +61,23 @@ public class ContributionCommandServiceImpl implements ContributionCommandServic
     }
 
     @Override
+    @Transactional
     public Optional<Contribution> update(Long id, CreateContributionCommand command) {
         var contributionOpt = contributionRepository.findById(id);
         if (contributionOpt.isEmpty()) return Optional.empty();
 
-        var contribution = contributionOpt.get();
-
-        Bill bill = billRepository.findById(command.billId())
+        var bill = billRepository.findById(command.billId())
                 .orElseThrow(() -> new IllegalArgumentException("Bill no encontrado"));
 
-        Household household = householdRepository.findById(command.householdId())
+        var household = householdRepository.findById(command.householdId())
                 .orElseThrow(() -> new IllegalArgumentException("Household no encontrado"));
 
+        var contribution = contributionOpt.get();
         contribution.update(command, bill, household);
-        contributionRepository.save(contribution);
+        contribution = contributionRepository.save(contribution);
 
-        // ❗ Si decides redistribuir en update también:
+        // limpiar hijos y redistribuir
+        memberContributionRepository.deleteByContribution_Id(contribution.getId());
         var members = memberRepository.findAllByHousehold_Id(household.getId());
         contribution.distribute(members, userRepository, memberContributionRepository);
 
@@ -87,9 +85,15 @@ public class ContributionCommandServiceImpl implements ContributionCommandServic
     }
 
     @Override
+    @Transactional
     public boolean delete(Long id) {
         if (!contributionRepository.existsById(id)) return false;
+
+        // 1) borrar hijos
+        memberContributionRepository.deleteByContribution_Id(id);
+        // 2) borrar padre
         contributionRepository.deleteById(id);
+
         return true;
     }
 }

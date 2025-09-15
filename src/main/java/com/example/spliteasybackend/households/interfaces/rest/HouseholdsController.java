@@ -1,5 +1,11 @@
 package com.example.spliteasybackend.households.interfaces.rest;
 
+import com.example.spliteasybackend.contributions.infrastructure.persistance.jpa.repositories.ContributionRepository;
+import com.example.spliteasybackend.contributions.interfaces.rest.resources.ContributionResource;
+import com.example.spliteasybackend.contributions.interfaces.rest.transform.ContributionResourceFromEntityAssembler;
+import com.example.spliteasybackend.householdmembers.infrastructure.persistance.jpa.repositories.HouseholdMemberRepository;
+import com.example.spliteasybackend.householdmembers.interfaces.rest.resources.HouseholdMemberResource;
+import com.example.spliteasybackend.householdmembers.interfaces.rest.transform.HouseholdMemberResourceFromEntityAssembler;
 import com.example.spliteasybackend.households.domain.models.queries.GetAllHouseholdsQuery;
 import com.example.spliteasybackend.households.domain.models.queries.GetHouseholdByIdQuery;
 import com.example.spliteasybackend.households.domain.services.HouseholdCommandService;
@@ -28,9 +34,17 @@ public class HouseholdsController {
     private final HouseholdCommandService commandService;
     private final HouseholdQueryService queryService;
 
-    public HouseholdsController(HouseholdCommandService commandService, HouseholdQueryService queryService) {
+    private final HouseholdMemberRepository householdMemberRepository;
+    private final ContributionRepository contributionRepository;
+
+    public HouseholdsController(HouseholdCommandService commandService,
+                                HouseholdQueryService queryService,
+                                HouseholdMemberRepository householdMemberRepository,
+                                ContributionRepository contributionRepository) {
         this.commandService = commandService;
         this.queryService = queryService;
+        this.householdMemberRepository = householdMemberRepository;
+        this.contributionRepository = contributionRepository;
     }
 
     @PostMapping
@@ -78,11 +92,35 @@ public class HouseholdsController {
         var resourceUpdated = HouseholdResourceFromEntityAssembler.toResourceFromEntity(updated.get());
         return ResponseEntity.ok(resourceUpdated);
     }
+
     @DeleteMapping("/{householdId}")
     @PreAuthorize("hasAuthority('ROLE_REPRESENTANTE')")
     @Operation(summary = "Delete household by ID")
     public ResponseEntity<Void> deleteHouseholdById(@PathVariable Long householdId) {
         boolean deleted = commandService.delete(householdId);
         return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    }
+
+
+    @GetMapping("/{householdId}/members")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "List members of a household")
+    public ResponseEntity<List<HouseholdMemberResource>> getHouseholdMembers(@PathVariable Long householdId) {
+        var list = householdMemberRepository.findAllByHousehold_Id(householdId);
+        var resources = list.stream()
+                .map(HouseholdMemberResourceFromEntityAssembler::toResourceFromEntity)
+                .toList();
+        return ResponseEntity.ok(resources);
+    }
+
+    @GetMapping("/{householdId}/contributions")
+    @PreAuthorize("hasAuthority('ROLE_REPRESENTANTE')")
+    @Operation(summary = "List contributions of a household")
+    public ResponseEntity<List<ContributionResource>> getHouseholdContributions(@PathVariable Long householdId) {
+        var list = contributionRepository.findAllByHouseholdId(householdId);
+        var resources = list.stream()
+                .map(ContributionResourceFromEntityAssembler::toResourceFromEntity)
+                .toList();
+        return ResponseEntity.ok(resources);
     }
 }
