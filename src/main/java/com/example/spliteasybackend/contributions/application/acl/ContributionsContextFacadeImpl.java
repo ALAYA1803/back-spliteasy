@@ -28,7 +28,8 @@ public class ContributionsContextFacadeImpl implements ContributionsContextFacad
                 householdId,
                 description,
                 fechaLimite,
-                Strategy.valueOf(strategy.toUpperCase()) // Enum a VO
+                Strategy.valueOf(strategy.toUpperCase()),
+                null
         );
         var result = commandService.handle(command);
         return result.map(c -> c.getId()).orElse(0L);
