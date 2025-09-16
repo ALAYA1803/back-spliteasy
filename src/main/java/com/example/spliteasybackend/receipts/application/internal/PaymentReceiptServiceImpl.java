@@ -1,5 +1,4 @@
 package com.example.spliteasybackend.receipts.application.internal;
-
 import com.example.spliteasybackend.membercontributions.domain.models.aggregates.MemberContribution;
 import com.example.spliteasybackend.membercontributions.infrastructure.persistance.jpa.repositories.MemberContributionRepository;
 import com.example.spliteasybackend.receipts.domain.model.entities.PaymentReceipt;
@@ -8,7 +7,6 @@ import com.example.spliteasybackend.receipts.domain.services.PaymentReceiptServi
 import com.example.spliteasybackend.receipts.infrastructure.persistence.jpa.repositories.PaymentReceiptRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -27,9 +25,11 @@ public class PaymentReceiptServiceImpl implements PaymentReceiptService {
     }
 
     @Override
-    public PaymentReceipt uploadReceipt(Long memberContributionId, Long currentUserId, String originalFilename, String publicUrl) {
+    public PaymentReceipt uploadReceipt(Long memberContributionId, Long currentUserId,
+                                        String originalFilename, String publicUrl) {
         MemberContribution mc = memberContributionRepository.findById(memberContributionId)
                 .orElseThrow(() -> new IllegalArgumentException("MemberContribution no encontrada"));
+
         Long ownerId = mc.getMemberId();
         if (ownerId != null && !ownerId.equals(currentUserId)) {
             throw new SecurityException("No puedes subir boletas de otra persona");
@@ -40,7 +40,9 @@ public class PaymentReceiptServiceImpl implements PaymentReceiptService {
     }
 
     @Override
-    public List<PaymentReceipt> listByMemberContribution(Long memberContributionId, Long currentUserId, boolean isRepresentative) {
+    public List<PaymentReceipt> listByMemberContribution(Long memberContributionId,
+                                                         Long currentUserId,
+                                                         boolean isRepresentative) {
         MemberContribution mc = memberContributionRepository.findById(memberContributionId)
                 .orElseThrow(() -> new IllegalArgumentException("MemberContribution no encontrada"));
 
@@ -57,8 +59,9 @@ public class PaymentReceiptServiceImpl implements PaymentReceiptService {
             r.setStatus(PaymentReceiptStatus.APPROVED);
             r.setReviewedByUserId(reviewerUserId);
             r.setReviewedAt(Instant.now());
+
             Long mcId = r.getMemberContribution().getId();
-            memberContributionRepository.markPaidNative(mcId, "PAGADO");
+            memberContributionRepository.markPaid(mcId, "PAGADO");
 
             return r;
         });
