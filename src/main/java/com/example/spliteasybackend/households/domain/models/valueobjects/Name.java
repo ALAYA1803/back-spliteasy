@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 
 @Embeddable
 @Getter
-@NoArgsConstructor // requerido por JPA
+@NoArgsConstructor
 public class Name {
 
     @Column(name = "name", nullable = false)

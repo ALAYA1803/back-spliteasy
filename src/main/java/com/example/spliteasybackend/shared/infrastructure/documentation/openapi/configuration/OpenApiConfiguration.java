@@ -14,8 +14,6 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfiguration {
 
-    // Properties
-
     @Value("${spring.application.name}")
     String applicationName;
 
@@ -25,12 +23,9 @@ public class OpenApiConfiguration {
     @Value("${documentation.application.version}")
     String applicationVersion;
 
-    // Methods
-
     @Bean
     public OpenAPI learningPlatformOpenApu() {
 
-        // General configuration
         var openApi = new OpenAPI();
         openApi.info(new Info()
                         .title(this.applicationName)
@@ -44,7 +39,6 @@ public class OpenApiConfiguration {
                                 .description("ACME Learning Platform wiki Documentation")
                                 .url("https://github.com/acme/learn-platform/wiki"));
 
-        // Add a Security scheme
         final String securitySchemeName = "bearerAuth";
 
         openApi.addSecurityItem(
@@ -61,7 +55,6 @@ public class OpenApiConfiguration {
                                 )
                 );
 
-        // Return the OpenAPI configuration object with all the settings
         return openApi;
 
     }

@@ -1,4 +1,3 @@
-// MemberContributionCommandService.java
 package com.example.spliteasybackend.membercontributions.domain.services;
 
 import com.example.spliteasybackend.membercontributions.domain.models.aggregates.MemberContribution;

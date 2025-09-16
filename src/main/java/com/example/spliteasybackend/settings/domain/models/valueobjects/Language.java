@@ -8,7 +8,7 @@ public class Language {
     @Column(name = "language")
     private String code;
 
-    protected Language() {} // requerido por JPA
+    protected Language() {}
 
     public Language(String code) {
         this.code = code;

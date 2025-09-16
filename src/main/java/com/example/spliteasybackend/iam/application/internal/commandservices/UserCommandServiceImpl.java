@@ -67,38 +67,30 @@ public class UserCommandServiceImpl implements UserCommandService {
     @Override
     public Optional<User> handle(SignUpCommand command) {
         try {
-            // Validar si ya existe un usuario con ese username
             if (userRepository.existsByUsername(command.username())) {
-                return Optional.empty(); // Devuelve vacío para que el controller devuelva 400
+                return Optional.empty();
             }
-
-            // Buscar todos los roles por nombre
             var roles = command.roles().stream()
                     .map(role -> roleRepository.findByName(role.getName()).orElse(null))
                     .filter(r -> r != null)
                     .toList();
-
-            // Validar que al menos un rol se haya encontrado
             if (roles.isEmpty()) {
-                return Optional.empty(); // Devuelve vacío si los roles son inválidos
+                return Optional.empty();
             }
 
-            // Crear y guardar el usuario
             var user = new User(
                     command.username(),
                     command.email(),
                     hashingService.encode(command.password()),
-                    command.income(), // ✅ aquí usas el valor real
+                    command.income(),
                     roles
             );
 
             userRepository.save(user);
 
-            // Retornar el usuario creado
             return userRepository.findByUsername(command.username());
 
         } catch (Exception e) {
-            // Si ocurre cualquier otra excepción inesperada, retorna vacío
             return Optional.empty();
         }
     }

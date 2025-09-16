@@ -1,4 +1,3 @@
-// MemberContributionsContextFacade.java
 package com.example.spliteasybackend.membercontributions.interfaces.acl;
 
 import java.time.LocalDateTime;

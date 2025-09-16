@@ -11,7 +11,7 @@ public class MemberContributionResourceFromEntityAssembler {
                 entity.getContributionId(),
                 entity.getMemberId(),
                 entity.getMonto(),
-                entity.getStatus().name(),       // Convertir enum a String
+                entity.getStatus().name(),
                 entity.getPagadoEn()
         );
     }

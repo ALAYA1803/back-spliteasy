@@ -28,8 +28,6 @@ public record CreateMemberContributionCommand(
         if (status == null) {
             throw new IllegalArgumentException("El estado es obligatorio");
         }
-
-        // Validación opcional (solo si status == PAGADO, se espera pagadoEn no nulo)
         if (status == Status.PAGADO && pagadoEn == null) {
             throw new IllegalArgumentException("Debe especificar la fecha de pago cuando el estado es PAGADO");
         }

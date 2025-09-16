@@ -12,7 +12,5 @@ import java.util.List;
 public interface HouseholdMemberRepository extends JpaRepository<HouseholdMember, Long> {
 
     boolean existsByHouseholdAndUser(Household household, User user);
-
-    // 🔍 Este es el que te faltaba para ContributionCommandServiceImpl
     List<HouseholdMember> findAllByHousehold_Id(Long householdId);
 }

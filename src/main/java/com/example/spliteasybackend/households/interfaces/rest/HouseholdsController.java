@@ -101,7 +101,6 @@ public class HouseholdsController {
         return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 
-
     @GetMapping("/{householdId}/members")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "List members of a household")
@@ -114,7 +113,7 @@ public class HouseholdsController {
     }
 
     @GetMapping("/{householdId}/contributions")
-    @PreAuthorize("hasAuthority('ROLE_REPRESENTANTE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_REPRESENTANTE','ROLE_MIEMBRO')")
     @Operation(summary = "List contributions of a household")
     public ResponseEntity<List<ContributionResource>> getHouseholdContributions(@PathVariable Long householdId) {
         var list = contributionRepository.findAllByHouseholdId(householdId);

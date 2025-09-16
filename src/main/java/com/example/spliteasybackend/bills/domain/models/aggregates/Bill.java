@@ -37,7 +37,6 @@ public class Bill extends AuditableAbstractAggregateRoot<Bill> {
     private LocalDate fecha;
 
     protected Bill() {
-        // Requerido por JPA
     }
 
     private Bill(Household household, String description, Money monto, User createdBy, LocalDate fecha) {

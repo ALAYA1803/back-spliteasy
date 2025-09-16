@@ -11,7 +11,7 @@ public class ContributionResourceFromEntityAssembler {
                 entity.getBill() != null ? entity.getBill().getId() : null,
                 entity.getHousehold() != null ? entity.getHousehold().getId() : null,
                 entity.getDescription(),
-                entity.getStrategy().name(),       // Enum a String
+                entity.getStrategy().name(),
                 entity.getFechaLimite()
         );
     }

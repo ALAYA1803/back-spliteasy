@@ -80,13 +80,11 @@ public class User extends AuditableAbstractAggregateRoot<User> {
         return this;
     }
 
-    // Verifica si el usuario tiene el rol REPRESENTANTE
     public boolean isRepresentante() {
         return roles.stream()
                 .anyMatch(role -> role.getName() == Roles.ROLE_REPRESENTANTE);
     }
 
-    // Verifica si el usuario tiene el rol MIEMBRO
     public boolean isMiembro() {
         return roles.stream()
                 .anyMatch(role -> role.getName() == Roles.ROLE_MIEMBRO);

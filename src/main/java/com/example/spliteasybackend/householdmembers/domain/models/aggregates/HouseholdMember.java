@@ -23,7 +23,6 @@ public class HouseholdMember extends AuditableAbstractAggregateRoot<HouseholdMem
     private Household household;
 
     protected HouseholdMember() {
-        // Requerido por JPA
     }
 
     private HouseholdMember(Household household, User user) {

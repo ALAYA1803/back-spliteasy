@@ -1,4 +1,3 @@
-// MemberContributionsContextFacadeImpl.java
 package com.example.spliteasybackend.membercontributions.application.acl;
 
 import com.example.spliteasybackend.membercontributions.domain.models.commands.CreateMemberContributionCommand;

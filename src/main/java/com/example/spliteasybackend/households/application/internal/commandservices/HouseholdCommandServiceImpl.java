@@ -23,11 +23,8 @@ public class HouseholdCommandServiceImpl implements HouseholdCommandService {
 
     @Override
     public Optional<Household> handle(CreateHouseholdCommand command) {
-        // ✅ Obtener al representante por ID
         var representante = userRepository.findById(command.representanteId())
                 .orElseThrow(() -> new IllegalArgumentException("Representante no encontrado"));
-
-        // ✅ Crear hogar con lógica de negocio
         var household = Household.crear(command, representante);
         householdRepository.save(household);
 
@@ -40,16 +37,12 @@ public class HouseholdCommandServiceImpl implements HouseholdCommandService {
         if (optional.isEmpty()) return Optional.empty();
 
         var household = optional.get();
-
-        // ⚠️ Validamos si el representante cambió
         if (!household.getRepresentante().getId().equals(command.representanteId())) {
             var nuevoRepresentante = userRepository.findById(command.representanteId())
                     .orElseThrow(() -> new IllegalArgumentException("Representante no encontrado"));
 
             household.transferirRepresentacionA(nuevoRepresentante);
         }
-
-        // ✅ Actualiza otros campos (nombre, moneda, descripción)
         household.update(command);
         householdRepository.save(household);
 

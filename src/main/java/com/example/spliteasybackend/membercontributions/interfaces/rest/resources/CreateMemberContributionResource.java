@@ -23,6 +23,5 @@ public record CreateMemberContributionResource(
         if (status == null || status.isBlank())
             throw new IllegalArgumentException("status cannot be blank");
 
-        // pagadoEn puede ser null si aún no ha pagado — no se valida como obligatorio
     }
 }

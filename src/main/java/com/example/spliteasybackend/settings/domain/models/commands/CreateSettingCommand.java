@@ -14,8 +14,6 @@ public record CreateSettingCommand(
         if (language == null || language.trim().isEmpty()) {
             throw new IllegalArgumentException("El lenguaje es obligatorio");
         }
-
-        // Si quisieras restringir a ciertos idiomas:
         var supportedLanguages = java.util.List.of("es", "en", "fr");
         if (!supportedLanguages.contains(language)) {
             throw new IllegalArgumentException("Idioma no soportado: " + language);

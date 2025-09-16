@@ -1,4 +1,3 @@
-// MemberContributionQueryServiceImpl.java
 package com.example.spliteasybackend.membercontributions.application.internal.queryservices;
 
 import com.example.spliteasybackend.membercontributions.domain.models.aggregates.MemberContribution;

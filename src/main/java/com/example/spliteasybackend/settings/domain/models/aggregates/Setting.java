@@ -34,7 +34,6 @@ public class Setting extends AuditableAbstractAggregateRoot<Setting> {
     private NotificationsEnabled notificationsEnabled;
 
     protected Setting() {
-        // Constructor requerido por JPA
     }
 
     public Setting(User user, CreateSettingCommand command) {

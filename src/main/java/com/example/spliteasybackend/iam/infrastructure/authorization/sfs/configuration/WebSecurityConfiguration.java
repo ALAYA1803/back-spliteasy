@@ -82,22 +82,23 @@ public class WebSecurityConfiguration {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/error").permitAll()
-
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/authentication/sign-in",
                                 "/api/v1/authentication/sign-up").permitAll()
-
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui.html",
                                 "/swagger-ui/**", "/swagger-resources/**", "/webjars/**").permitAll()
-
                         .requestMatchers(HttpMethod.GET, "/api/v1/households/**").authenticated()
-
+                        .requestMatchers(HttpMethod.GET, "/api/v1/household-members/**")
+                        .hasAnyAuthority("ROLE_MIEMBRO", "ROLE_REPRESENTANTE")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/member-contributions/**")
+                        .hasAnyAuthority("ROLE_MIEMBRO", "ROLE_REPRESENTANTE")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/contributions/**")
+                        .hasAnyAuthority("ROLE_MIEMBRO", "ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/bills/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/contributions/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/household-members/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/member-contributions/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers("/api/v1/settings/**").hasAuthority("ROLE_REPRESENTANTE")
-
                         .anyRequest().authenticated()
                 );
 

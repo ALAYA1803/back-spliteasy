@@ -6,5 +6,4 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface BillRepository extends JpaRepository<Bill, Long> {
-    // No necesitas más métodos si solo usas ID
 }
