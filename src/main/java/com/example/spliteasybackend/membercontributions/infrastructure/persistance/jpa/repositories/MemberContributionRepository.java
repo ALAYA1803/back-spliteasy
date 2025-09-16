@@ -15,10 +15,10 @@ public interface MemberContributionRepository extends JpaRepository<MemberContri
 
     @Transactional
     void deleteByContribution_Id(Long contributionId);
-
     List<MemberContribution> findAllByMember_IdAndContribution_Household_Id(Long memberId, Long householdId);
-
     List<MemberContribution> findAllByMember_Id(Long memberId);
+    List<MemberContribution> findAllByMember_User_Id(Long userId);
+    List<MemberContribution> findAllByMember_User_IdAndContribution_Household_Id(Long userId, Long householdId);
 
     @Modifying
     @Transactional
