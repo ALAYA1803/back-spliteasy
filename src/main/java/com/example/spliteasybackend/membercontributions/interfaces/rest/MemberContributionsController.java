@@ -1,16 +1,15 @@
 package com.example.spliteasybackend.membercontributions.interfaces.rest;
 
-import com.example.spliteasybackend.membercontributions.domain.models.queries.GetAllMemberContributionsQuery;
-import com.example.spliteasybackend.membercontributions.domain.models.queries.GetMemberContributionByIdQuery;
 import com.example.spliteasybackend.membercontributions.domain.services.MemberContributionCommandService;
 import com.example.spliteasybackend.membercontributions.domain.services.MemberContributionQueryService;
+import com.example.spliteasybackend.membercontributions.infrastructure.persistance.jpa.repositories.MemberContributionRepository;
 import com.example.spliteasybackend.membercontributions.interfaces.rest.resources.CreateMemberContributionResource;
 import com.example.spliteasybackend.membercontributions.interfaces.rest.resources.MemberContributionResource;
 import com.example.spliteasybackend.membercontributions.interfaces.rest.transform.CreateMemberContributionCommandFromResourceAssembler;
 import com.example.spliteasybackend.membercontributions.interfaces.rest.transform.MemberContributionResourceFromEntityAssembler;
+import com.example.spliteasybackend.membercontributions.domain.models.queries.GetAllMemberContributionsQuery;
+import com.example.spliteasybackend.membercontributions.domain.models.queries.GetMemberContributionByIdQuery;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -27,21 +26,21 @@ public class MemberContributionsController {
 
     private final MemberContributionCommandService commandService;
     private final MemberContributionQueryService queryService;
+    private final MemberContributionRepository memberContributionRepository;
 
     public MemberContributionsController(MemberContributionCommandService commandService,
-                                         MemberContributionQueryService queryService) {
+                                         MemberContributionQueryService queryService,
+                                         MemberContributionRepository memberContributionRepository) {
         this.commandService = commandService;
         this.queryService = queryService;
+        this.memberContributionRepository = memberContributionRepository;
     }
 
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_REPRESENTANTE')")
     @Operation(summary = "Create a member contribution")
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Member contribution created"),
-            @ApiResponse(responseCode = "400", description = "Bad request")
-    })
-    public ResponseEntity<MemberContributionResource> createMemberContribution(@RequestBody CreateMemberContributionResource resource) {
+    public ResponseEntity<MemberContributionResource> createMemberContribution(
+            @RequestBody CreateMemberContributionResource resource) {
         var command = CreateMemberContributionCommandFromResourceAssembler.toCommandFromResource(resource);
         var result = commandService.handle(command);
         if (result.isEmpty()) return ResponseEntity.badRequest().build();
@@ -53,10 +52,26 @@ public class MemberContributionsController {
     @Operation(summary = "Get all member contributions")
     public ResponseEntity<List<MemberContributionResource>> getAll() {
         var results = queryService.handle(new GetAllMemberContributionsQuery());
-        if (results.isEmpty()) return ResponseEntity.notFound().build();
         var resources = results.stream()
                 .map(MemberContributionResourceFromEntityAssembler::toResourceFromEntity)
                 .toList();
+        return ResponseEntity.ok(resources);
+    }
+
+    @GetMapping(params = {"householdId","memberId"})
+    @PreAuthorize("hasAnyAuthority('ROLE_MIEMBRO','ROLE_REPRESENTANTE')")
+    @Operation(summary = "Get member contributions by household and member")
+    public ResponseEntity<List<MemberContributionResource>> getByHouseholdAndMember(
+            @RequestParam Long householdId,
+            @RequestParam Long memberId) {
+
+        var list = memberContributionRepository
+                .findAllByMember_IdAndContribution_Household_Id(memberId, householdId);
+
+        var resources = list.stream()
+                .map(MemberContributionResourceFromEntityAssembler::toResourceFromEntity)
+                .toList();
+
         return ResponseEntity.ok(resources);
     }
 
@@ -71,8 +86,11 @@ public class MemberContributionsController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_REPRESENTANTE')")
     @Operation(summary = "Update member contribution by ID")
-    public ResponseEntity<MemberContributionResource> updateById(@PathVariable Long id, @RequestBody CreateMemberContributionResource resource) {
+    public ResponseEntity<MemberContributionResource> updateById(
+            @PathVariable Long id,
+            @RequestBody CreateMemberContributionResource resource) {
         var command = CreateMemberContributionCommandFromResourceAssembler.toCommandFromResource(resource);
         var updated = commandService.update(id, command);
         if (updated.isEmpty()) return ResponseEntity.notFound().build();

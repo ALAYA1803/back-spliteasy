@@ -7,4 +7,5 @@ public interface MemberContributionRepository extends JpaRepository<MemberContri
     List<MemberContribution> findByContribution_Id(Long contributionId);
     @Transactional
     void deleteByContribution_Id(Long contributionId);
+    List<MemberContribution> findAllByMember_IdAndContribution_Household_Id(Long memberId, Long householdId);
 }
