@@ -117,17 +117,18 @@ public class WebSecurityConfiguration {
                         .requestMatchers(HttpMethod.PUT, "/api/v1/household-members/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/household-members/**").hasAuthority("ROLE_REPRESENTANTE")
 
-                        // Member Contributions
+                       // Payment Receipts (primero)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/member-contributions/*/receipts").authenticated()
+                        .requestMatchers(HttpMethod.GET,  "/api/v1/member-contributions/*/receipts").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/receipts/*/approve").hasAuthority("ROLE_REPRESENTANTE")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/receipts/*/reject").hasAuthority("ROLE_REPRESENTANTE")
+
+                        // Luego lo general de member-contributions
                         .requestMatchers(HttpMethod.GET, "/api/v1/member-contributions/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/member-contributions/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/member-contributions/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/member-contributions/**").hasAuthority("ROLE_REPRESENTANTE")
 
-                        // Payment Receipts
-                        .requestMatchers(HttpMethod.POST, "/api/v1/member-contributions/*/receipts").authenticated()
-                        .requestMatchers(HttpMethod.GET,  "/api/v1/member-contributions/*/receipts").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/receipts/*/approve").hasAuthority("ROLE_REPRESENTANTE")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/receipts/*/reject").hasAuthority("ROLE_REPRESENTANTE")
 
                         // fallback
                         .anyRequest().authenticated()
