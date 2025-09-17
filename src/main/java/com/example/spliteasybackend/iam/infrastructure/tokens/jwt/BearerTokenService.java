@@ -24,4 +24,6 @@ public interface BearerTokenService extends TokenService {
      * @see Authentication
      */
     String generateToken(Authentication authentication);
+    String generateResetToken(Long userId, int minutes);
+    Long validateAndExtractUserIdFromResetToken(String token);
 }

@@ -24,7 +24,8 @@ import java.util.stream.Collectors;
 @Service
 public class TokenServiceImpl implements TokenService, BearerTokenService {
     private final Logger LOGGER = LoggerFactory.getLogger(TokenServiceImpl.class);
-
+    private static final String TOKEN_TYPE_CLAIM = "typ";
+    private static final String TOKEN_TYPE_RESET = "reset";
     private static final String AUTHORIZATION_PARAMETER_NAME = "Authorization";
     private static final String BEARER_TOKEN_PREFIX = "Bearer ";
     private static final int TOKEN_BEGIN_INDEX = 7;
@@ -36,7 +37,39 @@ public class TokenServiceImpl implements TokenService, BearerTokenService {
 
     @Value("${authorization.jwt.expiration.days}")
     private int expirationDays;
+    @Override
+    public String generateResetToken(Long userId, int minutes) {
+        Date issuedAt = new Date();
+        Date expiration = new Date(issuedAt.getTime() + minutes * 60_000L);
+        SecretKey key = getSigningKey();
 
+        Map<String, Object> claims = new HashMap<>();
+        claims.put(TOKEN_TYPE_CLAIM, TOKEN_TYPE_RESET);
+        claims.put("uid", userId);
+
+        return Jwts.builder()
+                .subject("reset")
+                .claims(claims)
+                .issuedAt(issuedAt)
+                .expiration(expiration)
+                .signWith(key)
+                .compact();
+    }
+    @Override
+    public Long validateAndExtractUserIdFromResetToken(String token) {
+        Claims claims = extractAllClaims(token);
+        Object typ = claims.get(TOKEN_TYPE_CLAIM);
+        if (typ == null || !TOKEN_TYPE_RESET.equals(String.valueOf(typ))) {
+            throw new IllegalArgumentException("Token inválido para restablecer contraseña.");
+        }
+        Object v = claims.get("uid");
+        if (v == null) throw new IllegalArgumentException("Token sin usuario.");
+        try {
+            return Long.valueOf(String.valueOf(v));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Token con usuario inválido.");
+        }
+    }
     @Override
     public String generateToken(Authentication authentication) {
         String username = authentication.getName();
