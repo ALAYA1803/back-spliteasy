@@ -5,25 +5,31 @@ import com.example.spliteasybackend.receipts.domain.services.PaymentReceiptServi
 import com.example.spliteasybackend.receipts.interfaces.rest.resources.PaymentReceiptResource;
 import com.example.spliteasybackend.receipts.interfaces.rest.transform.PaymentReceiptResourceFromEntityAssembler;
 import com.example.spliteasybackend.shared.domain.services.FileStorageService;
+
+import com.example.spliteasybackend.iam.domain.model.aggregates.User;
+import com.example.spliteasybackend.iam.infrastructure.persistence.jpa.repositories.UserRepository;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
 import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Objects;
-
-
-import com.example.spliteasybackend.iam.domain.model.aggregates.User ;
-import com.example.spliteasybackend.iam.infrastructure.persistence.jpa.repositories.UserRepository ;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -42,19 +48,42 @@ public class PaymentReceiptsController {
         this.userRepository = userRepository;
     }
 
+    /**
+     * Resuelve el ID del usuario autenticado SIN usar oauth2:
+     * 1) Atributo "userId" del request (si algún filtro lo setea)
+     * 2) Username desde Authentication -> lookup en BD
+     * Si falla, lanza 401 (no 500).
+     */
     private Long currentUserId(Authentication auth, HttpServletRequest req) {
         Object idAttr = req.getAttribute("userId");
-        if (idAttr instanceof Number n) return n.longValue();
-
-        String username = auth != null ? auth.getName() : null;
-        if (username == null || username.isBlank()) {
-            throw new IllegalStateException("No se pudo determinar el usuario autenticado (auth vacío).");
+        if (idAttr instanceof Number) return ((Number) idAttr).longValue();
+        if (idAttr instanceof String) {
+            try { return Long.parseLong((String) idAttr); }
+            catch (NumberFormatException ignore) {}
         }
 
-        return userRepository.findByUsername(username)
+        if (auth == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No autenticado");
+        }
+
+        String username = null;
+        Object principal = auth.getPrincipal();
+        if (principal instanceof UserDetails) {
+            username = ((UserDetails) principal).getUsername();
+        }
+        if (username == null || username.isBlank()) {
+            username = auth.getName();
+        }
+        if (username == null || username.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no identificado");
+        }
+
+        final String uname = username;
+        return userRepository.findByUsername(uname)
                 .map(User::getId)
-                .orElseThrow(() -> new IllegalStateException(
-                        "No se pudo determinar el ID del usuario (username=" + username + ")."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Usuario autenticado no encontrado: " + uname));
+
     }
 
     private boolean isRepresentative(Authentication auth) {
@@ -76,23 +105,20 @@ public class PaymentReceiptsController {
                                                                 Authentication auth,
                                                                 HttpServletRequest req) {
         if (file == null || file.isEmpty()) {
-            return ResponseEntity.badRequest().build();
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Archivo vacío");
         }
         if (file.getOriginalFilename() == null || file.getOriginalFilename().isBlank()) {
-            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).build();
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Nombre de archivo inválido");
         }
 
-        Long uid = currentUserId(auth, req);
-        String publicUrl = storageService.store(file);
+        final Long uid = currentUserId(auth, req);
+        final String publicUrl = storageService.store(file);
+
         PaymentReceipt saved = receiptService.uploadReceipt(
-                memberContributionId,
-                uid,
-                file.getOriginalFilename(),
-                publicUrl
+                memberContributionId, uid, file.getOriginalFilename(), publicUrl
         );
 
         PaymentReceiptResource body = PaymentReceiptResourceFromEntityAssembler.toResourceFromEntity(saved);
-
         URI location = URI.create(String.format("/api/v1/member-contributions/%d/receipts", memberContributionId));
         return ResponseEntity.created(location).body(body);
     }
@@ -103,14 +129,14 @@ public class PaymentReceiptsController {
     public ResponseEntity<List<PaymentReceiptResource>> listReceipts(@PathVariable Long memberContributionId,
                                                                      Authentication auth,
                                                                      HttpServletRequest req) {
-        Long uid = currentUserId(auth, req);
-        boolean rep = isRepresentative(auth);
+        final Long uid = currentUserId(auth, req);
+        final boolean rep = isRepresentative(auth);
 
-        var list = receiptService
+        List<PaymentReceiptResource> list = receiptService
                 .listByMemberContribution(memberContributionId, uid, rep)
                 .stream()
                 .map(PaymentReceiptResourceFromEntityAssembler::toResourceFromEntity)
-                .toList();
+                .collect(Collectors.toList());
 
         return ResponseEntity.ok(list);
     }
@@ -121,7 +147,7 @@ public class PaymentReceiptsController {
     public ResponseEntity<PaymentReceiptResource> approve(@PathVariable Long receiptId,
                                                           Authentication auth,
                                                           HttpServletRequest req) {
-        Long reviewerId = currentUserId(auth, req);
+        final Long reviewerId = currentUserId(auth, req);
 
         return receiptService.approve(receiptId, reviewerId)
                 .map(PaymentReceiptResourceFromEntityAssembler::toResourceFromEntity)
@@ -136,9 +162,10 @@ public class PaymentReceiptsController {
                                                          @RequestParam(required = false) String notes,
                                                          Authentication auth,
                                                          HttpServletRequest req) {
-        Long reviewerId = currentUserId(auth, req);
+        final Long reviewerId = currentUserId(auth, req);
+        final String safeNotes = notes;
 
-        return receiptService.reject(receiptId, reviewerId, notes)
+        return receiptService.reject(receiptId, reviewerId, safeNotes)
                 .map(PaymentReceiptResourceFromEntityAssembler::toResourceFromEntity)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
