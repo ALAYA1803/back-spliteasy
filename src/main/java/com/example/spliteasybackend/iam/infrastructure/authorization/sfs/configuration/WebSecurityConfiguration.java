@@ -68,11 +68,11 @@ public class WebSecurityConfiguration {
 
         http.cors(cors -> cors.configurationSource(req -> {
             var c = new CorsConfiguration();
-            c.setAllowedOrigins(List.of("*"));                      // Ajusta si necesitas orígenes específicos
-            c.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
+            c.setAllowedOrigins(List.of("*"));
+            c.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
             c.setAllowedHeaders(List.of("*"));
-            c.setExposedHeaders(List.of("Authorization","Content-Type"));
-            c.setAllowCredentials(false);                           // true si vas a usar cookies/withCredentials
+            c.setExposedHeaders(List.of("Authorization", "Content-Type"));
+            c.setAllowCredentials(false);
             return c;
         }));
 
@@ -80,54 +80,56 @@ public class WebSecurityConfiguration {
                 .exceptionHandling(e -> e.authenticationEntryPoint(unauthorizedRequestHandler))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Preflight & errores
+
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/error").permitAll()
 
-                        // Auth público
+                        // auth públicos
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/authentication/sign-in",
                                 "/api/v1/authentication/sign-up").permitAll()
 
-                        // Swagger público
+                        // swagger
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui.html",
                                 "/swagger-ui/**", "/swagger-resources/**", "/webjars/**").permitAll()
 
-                        // Archivos estáticos
+                        // archivos públicos
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
 
                         // Households
                         .requestMatchers(HttpMethod.GET, "/api/v1/households/**").authenticated()
 
                         // Bills
-                        .requestMatchers(HttpMethod.GET,    "/api/v1/bills/**").authenticated()
-                        .requestMatchers(HttpMethod.POST,   "/api/v1/bills/**").hasAuthority("ROLE_REPRESENTANTE")
-                        .requestMatchers(HttpMethod.PUT,    "/api/v1/bills/**").hasAuthority("ROLE_REPRESENTANTE")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/bills/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/bills/**").hasAuthority("ROLE_REPRESENTANTE")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/bills/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/bills/**").hasAuthority("ROLE_REPRESENTANTE")
 
                         // Contributions
-                        .requestMatchers(HttpMethod.GET,    "/api/v1/contributions/**").authenticated()
-                        .requestMatchers(HttpMethod.POST,   "/api/v1/contributions/**").hasAuthority("ROLE_REPRESENTANTE")
-                        .requestMatchers(HttpMethod.PUT,    "/api/v1/contributions/**").hasAuthority("ROLE_REPRESENTANTE")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/contributions/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/contributions/**").hasAuthority("ROLE_REPRESENTANTE")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/contributions/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/contributions/**").hasAuthority("ROLE_REPRESENTANTE")
 
                         // Household Members
-                        .requestMatchers(HttpMethod.GET,    "/api/v1/household-members/**").authenticated()
-                        .requestMatchers(HttpMethod.POST,   "/api/v1/household-members/**").hasAuthority("ROLE_REPRESENTANTE")
-                        .requestMatchers(HttpMethod.PUT,    "/api/v1/household-members/**").hasAuthority("ROLE_REPRESENTANTE")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/household-members/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/household-members/**").hasAuthority("ROLE_REPRESENTANTE")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/household-members/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/household-members/**").hasAuthority("ROLE_REPRESENTANTE")
 
                         // Member Contributions
-                        .requestMatchers(HttpMethod.GET,    "/api/v1/member-contributions/**").authenticated()
-                        .requestMatchers(HttpMethod.POST,   "/api/v1/member-contributions/**").hasAuthority("ROLE_REPRESENTANTE")
-                        .requestMatchers(HttpMethod.PUT,    "/api/v1/member-contributions/**").hasAuthority("ROLE_REPRESENTANTE")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/member-contributions/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/member-contributions/**").hasAuthority("ROLE_REPRESENTANTE")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/member-contributions/**").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/member-contributions/**").hasAuthority("ROLE_REPRESENTANTE")
 
                         // Payment Receipts
-                        .requestMatchers(HttpMethod.POST, "/api/v1/payment-receipts").hasAnyAuthority("ROLE_MIEMBRO","ROLE_REPRESENTANTE")
-                        .requestMatchers(HttpMethod.GET,  "/api/v1/payment-receipts/**").hasAnyAuthority("ROLE_MIEMBRO","ROLE_REPRESENTANTE")
-                        .requestMatchers(HttpMethod.PUT,  "/api/v1/payment-receipts/**").hasAuthority("ROLE_REPRESENTANTE")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/member-contributions/*/receipts").hasAnyAuthority("ROLE_MIEMBRO","ROLE_REPRESENTANTE")
+                        .requestMatchers(HttpMethod.GET,  "/api/v1/member-contributions/*/receipts").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/receipts/*/approve").hasAuthority("ROLE_REPRESENTANTE")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/receipts/*/reject").hasAuthority("ROLE_REPRESENTANTE")
 
+                        // fallback
                         .anyRequest().authenticated()
                 );
 

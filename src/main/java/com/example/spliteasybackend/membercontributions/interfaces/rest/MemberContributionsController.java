@@ -48,22 +48,11 @@ public class MemberContributionsController {
         return new ResponseEntity<>(responseResource, HttpStatus.CREATED);
     }
 
-    @GetMapping
-    @PreAuthorize("hasAuthority('ROLE_REPRESENTANTE')")
-    @Operation(summary = "Get all member contributions")
-    public ResponseEntity<List<MemberContributionResource>> getAll() {
-        var results = queryService.handle(new GetAllMemberContributionsQuery());
-        var resources = results.stream()
-                .map(MemberContributionResourceFromEntityAssembler::toResourceFromEntity)
-                .toList();
-        return ResponseEntity.ok(resources);
-    }
-
-    @GetMapping(params = "userId")
+    @GetMapping(params = "memberId")
     @PreAuthorize("hasAnyAuthority('ROLE_MIEMBRO','ROLE_REPRESENTANTE')")
-    @Operation(summary = "Get member contributions by user (memberId = userId)")
-    public ResponseEntity<List<MemberContributionResource>> getByUser(@RequestParam Long userId) {
-        var list = memberContributionRepository.findAllByMember_Id(userId);
+    @Operation(summary = "Get member contributions by member (user) id")
+    public ResponseEntity<List<MemberContributionResource>> getByMemberId(@RequestParam Long memberId) {
+        var list = memberContributionRepository.findAllByMember_Id(memberId);
         var resources = list.stream()
                 .map(MemberContributionResourceFromEntityAssembler::toResourceFromEntity)
                 .toList();
@@ -76,19 +65,26 @@ public class MemberContributionsController {
     public ResponseEntity<List<MemberContributionResource>> getByHouseholdAndMember(
             @RequestParam Long householdId,
             @RequestParam Long memberId) {
-
         var list = memberContributionRepository
                 .findAllByMember_IdAndContribution_Household_Id(memberId, householdId);
-
         var resources = list.stream()
                 .map(MemberContributionResourceFromEntityAssembler::toResourceFromEntity)
                 .toList();
+        return ResponseEntity.ok(resources);
+    }
 
+    @GetMapping
+    @PreAuthorize("hasAuthority('ROLE_REPRESENTANTE')")
+    @Operation(summary = "Get all member contributions (representative only)")
+    public ResponseEntity<List<MemberContributionResource>> getAll() {
+        var results = queryService.handle(new GetAllMemberContributionsQuery());
+        var resources = results.stream()
+                .map(MemberContributionResourceFromEntityAssembler::toResourceFromEntity)
+                .toList();
         return ResponseEntity.ok(resources);
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get member contribution by ID")
     public ResponseEntity<MemberContributionResource> getById(@PathVariable Long id) {
         var query = new GetMemberContributionByIdQuery(id);
