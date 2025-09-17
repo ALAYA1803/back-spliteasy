@@ -124,7 +124,7 @@ public class WebSecurityConfiguration {
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/member-contributions/**").hasAuthority("ROLE_REPRESENTANTE")
 
                         // Payment Receipts
-                        .requestMatchers(HttpMethod.POST, "/api/v1/member-contributions/*/receipts").hasAnyAuthority("ROLE_MIEMBRO","ROLE_REPRESENTANTE")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/member-contributions/*/receipts").authenticated()
                         .requestMatchers(HttpMethod.GET,  "/api/v1/member-contributions/*/receipts").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/receipts/*/approve").hasAuthority("ROLE_REPRESENTANTE")
                         .requestMatchers(HttpMethod.POST, "/api/v1/receipts/*/reject").hasAuthority("ROLE_REPRESENTANTE")

@@ -48,7 +48,7 @@ public class PaymentReceiptsController {
     @PostMapping(
             value = "/member-contributions/{memberContributionId}/receipts",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyAuthority('ROLE_MIEMBRO','ROLE_REPRESENTANTE')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Sube boleta de pago (queda PENDING) para una member-contribution")
     public ResponseEntity<PaymentReceiptResource> uploadReceipt(@PathVariable Long memberContributionId,
                                                                 @RequestPart("file") MultipartFile file,
