@@ -148,11 +148,14 @@ public class PaymentReceiptsController {
                                                           Authentication auth,
                                                           HttpServletRequest req) {
         final Long reviewerId = currentUserId(auth, req);
-
-        return receiptService.approve(receiptId, reviewerId)
-                .map(PaymentReceiptResourceFromEntityAssembler::toResourceFromEntity)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        try {
+            return receiptService.approve(receiptId, reviewerId)
+                    .map(PaymentReceiptResourceFromEntityAssembler::toResourceFromEntity)
+                    .map(ResponseEntity::ok)
+                    .orElseGet(() -> ResponseEntity.notFound().build());
+        } catch (IllegalStateException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getMessage());
+        }
     }
 
     @PostMapping("/receipts/{receiptId}/reject")
@@ -163,11 +166,13 @@ public class PaymentReceiptsController {
                                                          Authentication auth,
                                                          HttpServletRequest req) {
         final Long reviewerId = currentUserId(auth, req);
-        final String safeNotes = notes;
-
-        return receiptService.reject(receiptId, reviewerId, safeNotes)
-                .map(PaymentReceiptResourceFromEntityAssembler::toResourceFromEntity)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        try {
+            return receiptService.reject(receiptId, reviewerId, notes)
+                    .map(PaymentReceiptResourceFromEntityAssembler::toResourceFromEntity)
+                    .map(ResponseEntity::ok)
+                    .orElseGet(() -> ResponseEntity.notFound().build());
+        } catch (IllegalStateException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getMessage());
+        }
     }
 }
