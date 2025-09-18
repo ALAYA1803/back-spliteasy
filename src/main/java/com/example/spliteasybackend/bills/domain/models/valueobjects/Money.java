@@ -10,7 +10,7 @@ public class Money {
 
     private BigDecimal value;
 
-    public static final Money ZERO = new Money(BigDecimal.ZERO); // ✅ Constante estática
+    public static final Money ZERO = new Money(BigDecimal.ZERO);
 
     protected Money() {
         this.value = BigDecimal.ZERO;

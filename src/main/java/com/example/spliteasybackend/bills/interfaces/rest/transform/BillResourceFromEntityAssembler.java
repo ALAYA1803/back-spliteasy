@@ -12,7 +12,7 @@ public class BillResourceFromEntityAssembler {
                 entity.getId(),
                 entity.getHousehold() != null ? entity.getHousehold().getId() : null,
                 entity.getDescription(),
-                entity.getMonto() != null ? entity.getMonto().value() : BigDecimal.ZERO, /// Extraer BigDecimal desde el value object Money
+                entity.getMonto() != null ? entity.getMonto().value() : BigDecimal.ZERO,
                 entity.getCreatedBy() != null ? entity.getCreatedBy().getId() : null,
                 entity.getFecha()
         );

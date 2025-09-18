@@ -89,8 +89,8 @@ public class WebSecurityConfiguration {
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/authentication/sign-in",
                                 "/api/v1/authentication/sign-up",
-                                "/api/v1/authentication/forgot-password",  // AÑADIDO
-                                "/api/v1/authentication/reset-password"    // AÑADIDO
+                                "/api/v1/authentication/forgot-password",
+                                "/api/v1/authentication/reset-password"
                         ).permitAll()
 
                         // ---- Swagger ----

@@ -48,7 +48,6 @@ public class Contribution extends AuditableAbstractAggregateRoot<Contribution> {
     private Strategy strategy;
 
     protected Contribution() {
-        // Requerido por JPA
     }
 
     private Contribution(Bill bill, Household household, String description, LocalDate fechaLimite, Strategy strategy) {
