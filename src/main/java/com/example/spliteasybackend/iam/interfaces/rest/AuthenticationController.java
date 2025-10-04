@@ -26,12 +26,15 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.util.Map;
 
 @RestController
 @RequestMapping(value = "/api/v1/authentication", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -39,10 +42,13 @@ import java.net.URI;
 @Validated
 public class AuthenticationController {
 
-
     private static final Logger log = LoggerFactory.getLogger(AuthenticationController.class);
+
     @Value("${recaptcha.secret-key}")
-    private String secretKey;
+    private String webSecret;
+
+    @Value("${recaptcha.android-secret-key:}")
+    private String androidSecret;
 
     private final UserCommandService userCommandService;
     private final BearerTokenService tokenService;
@@ -59,20 +65,49 @@ public class AuthenticationController {
         this.hashingService = hashingService;
     }
 
-    // Método para validar el CAPTCHA usando el servicio de Google reCAPTCHA
-    public boolean validateCaptcha(String captchaToken) {
+
+    private boolean verifyWithSecret(String token, String secret) {
+        if (secret == null || secret.isBlank() || token == null || token.isBlank()) return false;
+
         RestTemplate restTemplate = new RestTemplate();
-        String url = "https://www.google.com/recaptcha/api/siteverify?secret=" + secretKey + "&response=" + captchaToken;
+        String url = "https://www.google.com/recaptcha/api/siteverify";
+
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("secret", secret);
+        form.add("response", token);
 
         try {
-            String response = restTemplate.getForObject(url, String.class);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> resp = restTemplate.postForObject(url, form, Map.class);
+            boolean success = resp != null && Boolean.TRUE.equals(resp.get("success"));
 
-            // Verificar la respuesta del servicio de reCAPTCHA
-            return response.contains("\"success\": true"); // Si la respuesta contiene "success": true, es válido
+            if (success) {
+                return true;
+            } else {
+                log.debug("reCAPTCHA failed with provided secret. Response: {}", resp);
+                return false;
+            }
         } catch (Exception e) {
-            log.error("Error de validación CAPTCHA: ", e);
-            return false; // Si hay algún error al comunicarse con el servicio de reCAPTCHA
+            log.error("Error validating reCAPTCHA", e);
+            return false;
         }
+    }
+
+    public boolean validateCaptcha(String captchaToken) {
+        if (captchaToken == null || captchaToken.isBlank()) return false;
+
+        if (verifyWithSecret(captchaToken, webSecret)) {
+            log.debug("reCAPTCHA OK using WEB secret");
+            return true;
+        }
+
+        if (verifyWithSecret(captchaToken, androidSecret)) {
+            log.debug("reCAPTCHA OK using ANDROID secret");
+            return true;
+        }
+
+        log.info("reCAPTCHA invalid with both WEB and ANDROID secrets");
+        return false;
     }
 
 
@@ -85,7 +120,7 @@ public class AuthenticationController {
     })
     public ResponseEntity<AuthenticatedUserResource> signIn(@Valid @RequestBody SignInResource signInResource) {
 
-        // Validar el CAPTCHA
+
         String captchaToken = signInResource.captchaToken();
         boolean isCaptchaValid = validateCaptcha(captchaToken);
         if (!isCaptchaValid) {
@@ -93,10 +128,7 @@ public class AuthenticationController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        //
-
         var cmd = SignInCommandFromResourceAssembler.toCommandFromResource(signInResource);
-
         var result = userCommandService.handle(cmd);
         if (result.isEmpty()) {
             log.info("Sign-in failed (invalid credentials)");
@@ -120,14 +152,12 @@ public class AuthenticationController {
     })
     public ResponseEntity<UserResource> signUp(@Valid @RequestBody SignUpResource signUpResource) {
 
-        // Validar el CAPTCHA
         String captchaToken = signUpResource.captchaToken();
         if (!validateCaptcha(captchaToken)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
 
         var cmd = SignUpCommandFromResourceAssembler.toCommandFromResource(signUpResource);
-
         var created = userCommandService.handle(cmd);
         if (created.isEmpty()) {
             log.info("Sign-up failed (validation/business rules)");
