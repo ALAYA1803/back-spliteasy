@@ -21,12 +21,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
@@ -37,7 +39,10 @@ import java.net.URI;
 @Validated
 public class AuthenticationController {
 
+
     private static final Logger log = LoggerFactory.getLogger(AuthenticationController.class);
+    @Value("${recaptcha.secret-key}")
+    private String secretKey;
 
     private final UserCommandService userCommandService;
     private final BearerTokenService tokenService;
@@ -54,6 +59,23 @@ public class AuthenticationController {
         this.hashingService = hashingService;
     }
 
+    // Método para validar el CAPTCHA usando el servicio de Google reCAPTCHA
+    public boolean validateCaptcha(String captchaToken) {
+        RestTemplate restTemplate = new RestTemplate();
+        String url = "https://www.google.com/recaptcha/api/siteverify?secret=" + secretKey + "&response=" + captchaToken;
+
+        try {
+            String response = restTemplate.getForObject(url, String.class);
+
+            // Verificar la respuesta del servicio de reCAPTCHA
+            return response.contains("\"success\": true"); // Si la respuesta contiene "success": true, es válido
+        } catch (Exception e) {
+            log.error("Error de validación CAPTCHA: ", e);
+            return false; // Si hay algún error al comunicarse con el servicio de reCAPTCHA
+        }
+    }
+
+
     @PostMapping(value = "/sign-in", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Sign-in", description = "Sign-in with the provided credentials.")
     @ApiResponses({
@@ -62,6 +84,17 @@ public class AuthenticationController {
             @ApiResponse(responseCode = "401", description = "Invalid credentials.")
     })
     public ResponseEntity<AuthenticatedUserResource> signIn(@Valid @RequestBody SignInResource signInResource) {
+
+        // Validar el CAPTCHA
+        String captchaToken = signInResource.captchaToken();
+        boolean isCaptchaValid = validateCaptcha(captchaToken);
+        if (!isCaptchaValid) {
+            log.info("Sign-in failed (invalid captcha)");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        //
+
         var cmd = SignInCommandFromResourceAssembler.toCommandFromResource(signInResource);
 
         var result = userCommandService.handle(cmd);
@@ -86,6 +119,13 @@ public class AuthenticationController {
             @ApiResponse(responseCode = "400", description = "Bad request.")
     })
     public ResponseEntity<UserResource> signUp(@Valid @RequestBody SignUpResource signUpResource) {
+
+        // Validar el CAPTCHA
+        String captchaToken = signUpResource.captchaToken();
+        if (!validateCaptcha(captchaToken)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+
         var cmd = SignUpCommandFromResourceAssembler.toCommandFromResource(signUpResource);
 
         var created = userCommandService.handle(cmd);

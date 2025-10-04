@@ -8,5 +8,6 @@ public record SignUpResource(
         String email,
         String password,
         BigDecimal income,
-        List<String> roles
+        List<String> roles,
+        String captchaToken
 ) {}
