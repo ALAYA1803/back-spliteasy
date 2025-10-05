@@ -9,9 +9,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,6 +21,8 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
@@ -64,19 +68,29 @@ public class WebSecurityConfiguration {
     public PasswordEncoder passwordEncoder() { return hashingService; }
 
     @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration cfg = new CorsConfiguration();
+        cfg.setAllowedOriginPatterns(List.of(
+                "https://new-spliteasy.netlify.app",
+                "https://app-spliteasy.netlify.app",
+                "http://localhost:4200"
+        ));
+        cfg.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
+        cfg.setAllowedHeaders(List.of("Authorization","Content-Type","X-Requested-With"));
+        cfg.setExposedHeaders(List.of("Authorization","Content-Type"));
+        cfg.setAllowCredentials(false); // JWT por header; no cookies
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/v1/**", cfg);
+        source.registerCorsConfiguration("/v3/api-docs/**", cfg);
+        source.registerCorsConfiguration("/swagger-ui/**", cfg);
+        return source;
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-
-        http.cors(cors -> cors.configurationSource(req -> {
-            var c = new CorsConfiguration();
-            c.setAllowedOrigins(List.of("*"));
-            c.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-            c.setAllowedHeaders(List.of("*"));
-            c.setExposedHeaders(List.of("Authorization", "Content-Type"));
-            c.setAllowCredentials(false);
-            return c;
-        }));
-
-        http.csrf(csrf -> csrf.disable())
+        http
+                .cors(Customizer.withDefaults())
+                .csrf(AbstractHttpConfigurer::disable)
                 .exceptionHandling(e -> e.authenticationEntryPoint(unauthorizedRequestHandler))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth

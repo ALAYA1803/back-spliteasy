@@ -22,18 +22,19 @@ import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 import java.net.URI;
+import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -50,6 +51,9 @@ public class AuthenticationController {
     @Value("${recaptcha.android-secret-key:}")
     private String androidSecret;
 
+    @Value("${recaptcha.min-score:0.5}")
+    private double minScore;
+
     private final UserCommandService userCommandService;
     private final BearerTokenService tokenService;
     private final UserRepository userRepository;
@@ -65,48 +69,72 @@ public class AuthenticationController {
         this.hashingService = hashingService;
     }
 
+    private RestTemplate buildRecaptchaRestTemplate() {
+        SimpleClientHttpRequestFactory f = new SimpleClientHttpRequestFactory();
+        f.setConnectTimeout((int) Duration.ofSeconds(5).toMillis());
+        f.setReadTimeout((int) Duration.ofSeconds(5).toMillis());
+        return new RestTemplate(f);
+    }
 
-    private boolean verifyWithSecret(String token, String secret) {
-        if (secret == null || secret.isBlank() || token == null || token.isBlank()) return false;
-
-        RestTemplate restTemplate = new RestTemplate();
-        String url = "https://www.google.com/recaptcha/api/siteverify";
-
-        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-        form.add("secret", secret);
-        form.add("response", token);
+    @SuppressWarnings("unchecked")
+    private RecaptchaResponse callGoogleVerify(String token, String secret) {
+        if (secret == null || secret.isBlank() || token == null || token.isBlank()) {
+            return RecaptchaResponse.failed("missing-input");
+        }
 
         try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> resp = restTemplate.postForObject(url, form, Map.class);
-            boolean success = resp != null && Boolean.TRUE.equals(resp.get("success"));
+            RestTemplate restTemplate = buildRecaptchaRestTemplate();
+            String url = "https://www.google.com/recaptcha/api/siteverify";
 
-            if (success) {
-                return true;
-            } else {
-                log.debug("reCAPTCHA failed with provided secret. Response: {}", resp);
-                return false;
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+            MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+            form.add("secret", secret);
+            form.add("response", token);
+
+            HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(form, headers);
+            ResponseEntity<Map> resp = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
+
+            Map<String, Object> body = resp.getBody();
+            boolean success = body != null && Boolean.TRUE.equals(body.get("success"));
+
+            Double score = null;
+            if (body != null && body.get("score") instanceof Number n) {
+                score = n.doubleValue();
             }
-        } catch (Exception e) {
-            log.error("Error validating reCAPTCHA", e);
-            return false;
+
+            List<String> errors = null;
+            if (body != null && body.get("error-codes") instanceof List l) {
+                errors = (List<String>) l;
+            }
+
+            return new RecaptchaResponse(success, score, errors);
+        } catch (RestClientException ex) {
+            log.warn("reCAPTCHA request error: {}", ex.getMessage());
+            return RecaptchaResponse.failed("recaptcha-request-error");
+        } catch (Exception ex) {
+            log.error("reCAPTCHA unexpected error", ex);
+            return RecaptchaResponse.failed("recaptcha-unexpected-error");
         }
     }
 
-    public boolean validateCaptcha(String captchaToken) {
+    private boolean validateCaptcha(String captchaToken) {
         if (captchaToken == null || captchaToken.isBlank()) return false;
 
-        if (verifyWithSecret(captchaToken, webSecret)) {
-            log.debug("reCAPTCHA OK using WEB secret");
+        RecaptchaResponse web = callGoogleVerify(captchaToken, webSecret);
+        if (web.successWithScore(minScore)) {
+            log.debug("reCAPTCHA OK (WEB). score={}", web.score());
             return true;
         }
 
-        if (verifyWithSecret(captchaToken, androidSecret)) {
-            log.debug("reCAPTCHA OK using ANDROID secret");
+        RecaptchaResponse android = callGoogleVerify(captchaToken, androidSecret);
+        if (android.successWithScore(minScore)) {
+            log.debug("reCAPTCHA OK (ANDROID). score={}", android.score());
             return true;
         }
 
-        log.info("reCAPTCHA invalid with both WEB and ANDROID secrets");
+        log.info("reCAPTCHA invalid. web={} android={}", web, android);
         return false;
     }
 
@@ -120,18 +148,16 @@ public class AuthenticationController {
     })
     public ResponseEntity<AuthenticatedUserResource> signIn(@Valid @RequestBody SignInResource signInResource) {
 
-
         String captchaToken = signInResource.captchaToken();
-        boolean isCaptchaValid = validateCaptcha(captchaToken);
-        if (!isCaptchaValid) {
-            log.info("Sign-in failed (invalid captcha)");
+        if (!validateCaptcha(captchaToken)) {
+            log.info("Sign-in denied: invalid captcha");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
         var cmd = SignInCommandFromResourceAssembler.toCommandFromResource(signInResource);
         var result = userCommandService.handle(cmd);
         if (result.isEmpty()) {
-            log.info("Sign-in failed (invalid credentials)");
+            log.info("Sign-in failed: invalid credentials for username={}", signInResource.username());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
@@ -151,16 +177,15 @@ public class AuthenticationController {
             @ApiResponse(responseCode = "400", description = "Bad request.")
     })
     public ResponseEntity<UserResource> signUp(@Valid @RequestBody SignUpResource signUpResource) {
-
-        String captchaToken = signUpResource.captchaToken();
-        if (!validateCaptcha(captchaToken)) {
+        if (!validateCaptcha(signUpResource.captchaToken())) {
+            log.info("Sign-up denied: invalid captcha");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
 
         var cmd = SignUpCommandFromResourceAssembler.toCommandFromResource(signUpResource);
         var created = userCommandService.handle(cmd);
         if (created.isEmpty()) {
-            log.info("Sign-up failed (validation/business rules)");
+            log.info("Sign-up failed (business validation)");
             return ResponseEntity.badRequest().build();
         }
 
@@ -187,9 +212,7 @@ public class AuthenticationController {
 
     @PostMapping(value = "/forgot-password", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Forgot password", description = "Generates a short-lived reset token and sends instructions.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Request accepted.")
-    })
+    @ApiResponses({ @ApiResponse(responseCode = "200", description = "Request accepted.") })
     public ResponseEntity<ForgotPasswordResponse> forgotPassword(@RequestBody ForgotPasswordRequest req) {
         if (req == null || req.email() == null || req.email().isBlank()) {
             return ResponseEntity.ok(new ForgotPasswordResponse("Si el email existe, enviaremos instrucciones.", null));
@@ -202,7 +225,7 @@ public class AuthenticationController {
 
         var user = userOpt.get();
         String token = tokenService.generateResetToken(user.getId(), 15);
-
+        // Aquí normalmente dispararías un correo. Por ahora devolvemos el token (útil para pruebas).
         return ResponseEntity.ok(new ForgotPasswordResponse("Hemos enviado instrucciones a tu correo.", token));
     }
 
@@ -233,6 +256,24 @@ public class AuthenticationController {
         } catch (Exception ex) {
             log.error("reset-password error", ex);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new BasicMessage("Token inválido o expirado."));
+        }
+    }
+
+    private record RecaptchaResponse(boolean success, Double score, List<String> errorCodes) {
+
+        static RecaptchaResponse failed(String code) {
+            return new RecaptchaResponse(false, null, List.of(code));
+        }
+
+        boolean successWithScore(double minScore) {
+            if (!success) return false;
+            if (score == null) return true;
+            return score >= minScore;
+        }
+
+        @Override
+        public String toString() {
+            return "success=" + success + ", score=" + score + ", errors=" + errorCodes;
         }
     }
 }
