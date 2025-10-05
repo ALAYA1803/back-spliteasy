@@ -2,7 +2,7 @@ package com.example.spliteasybackend.iam.interfaces.rest;
 
 import com.example.spliteasybackend.iam.domain.services.UserCommandService;
 import com.example.spliteasybackend.iam.infrastructure.hashing.bcrypt.BCryptHashingService;
-import com.example.spliteasybackend.iam.infrastructure.outboundservices.tokens.RecaptchaEnterpriseService;
+import com.example.spliteasybackend.iam.infrastructure.outboundservices.tokens.PlayIntegrityService;
 import com.example.spliteasybackend.iam.infrastructure.persistence.jpa.repositories.UserRepository;
 import com.example.spliteasybackend.iam.infrastructure.tokens.jwt.BearerTokenService;
 import com.example.spliteasybackend.iam.interfaces.rest.resources.AuthenticatedUserResource;
@@ -52,24 +52,22 @@ public class AuthenticationController {
     @Value("${recaptcha.min-score:0.5}")
     private double minScore;
 
-    private static final String ANDROID_EXPECTED_PACKAGE = "com.spliteasy.spliteasy";
-
     private final UserCommandService userCommandService;
     private final BearerTokenService tokenService;
     private final UserRepository userRepository;
     private final BCryptHashingService hashingService;
-    private final RecaptchaEnterpriseService recaptchaEnterpriseService;
+    private final PlayIntegrityService playIntegrityService;
 
     public AuthenticationController(UserCommandService userCommandService,
                                     BearerTokenService tokenService,
                                     UserRepository userRepository,
                                     BCryptHashingService hashingService,
-                                    RecaptchaEnterpriseService recaptchaEnterpriseService) {
+                                    PlayIntegrityService playIntegrityService) {
         this.userCommandService = userCommandService;
         this.tokenService = tokenService;
         this.userRepository = userRepository;
         this.hashingService = hashingService;
-        this.recaptchaEnterpriseService = recaptchaEnterpriseService;
+        this.playIntegrityService = playIntegrityService;
     }
 
     private RestTemplate buildRecaptchaRestTemplate() {
@@ -114,20 +112,28 @@ public class AuthenticationController {
         }
     }
 
+    /**
+     * Intenta validar como Play Integrity (Android).
+     * Si falla o no aplica, hace fallback a reCAPTCHA Web (siteverify).
+     */
     private CaptchaCheck checkCaptcha(String captchaToken, String expectedAction) {
         if (captchaToken == null || captchaToken.isBlank()) {
             return CaptchaCheck.fail("NONE", "missing-input", null);
         }
 
-        var andr = recaptchaEnterpriseService.verifyAndroid(
-                captchaToken, expectedAction, ANDROID_EXPECTED_PACKAGE, minScore
-        );
-        if (andr.ok()) {
-            return CaptchaCheck.ok("ANDROID_ENTERPRISE", (double) andr.score());
-        } else {
-            log.info("Android Enterprise captcha failed: {}", andr.reason());
+        // 1) Play Integrity (Android)
+        try {
+            boolean ok = playIntegrityService.verify(captchaToken);
+            if (ok) {
+                return CaptchaCheck.ok("PLAY_INTEGRITY", null);
+            } else {
+                log.info("Play Integrity no válido, probando fallback Web reCAPTCHA...");
+            }
+        } catch (Exception ex) {
+            log.warn("Error verificando Play Integrity: {}", ex.getMessage());
         }
 
+        // 2) Fallback: reCAPTCHA Web (siteverify)
         var web = callGoogleVerify(captchaToken, webSecret);
         if (web.successWithScore(minScore)) {
             return CaptchaCheck.ok("WEB", web.score());
@@ -252,7 +258,7 @@ public class AuthenticationController {
         }
     }
 
-    // ===== NUEVO DTO de salida detallado =====
+    // ===== DTO de salida para debugging =====
     public record CaptchaCheck(boolean ok, String source, String reason, Double score) {
         public static CaptchaCheck ok(String source, Double score) {
             return new CaptchaCheck(true, source, null, score);
