@@ -4,8 +4,10 @@ import com.example.spliteasybackend.iam.infrastructure.authorization.sfs.pipelin
 import com.example.spliteasybackend.iam.infrastructure.hashing.bcrypt.BCryptHashingService;
 import com.example.spliteasybackend.iam.infrastructure.tokens.jwt.BearerTokenService;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -14,8 +16,11 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -62,9 +67,9 @@ public class WebSecurityConfiguration {
     public PasswordEncoder passwordEncoder() { return hashingService; }
 
     @Bean
+    @Order(100)
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // Usa el bean de CorsConfig
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .exceptionHandling(e -> e.authenticationEntryPoint(unauthorizedRequestHandler))
@@ -119,6 +124,47 @@ public class WebSecurityConfiguration {
 
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(authorizationRequestFilter(), UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    @Bean
+    @Order(1)
+    public SecurityFilterChain swaggerSecurityChain(
+            HttpSecurity http,
+            @Value("${docs.basic.enabled:false}") boolean docsAuthEnabled,
+            @Value("${docs.basic.user:docs}") String docsUser,
+            @Value("${docs.basic.pass:changeit}") String docsPass
+    ) throws Exception {
+
+        http.securityMatcher("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html");
+
+        if (!docsAuthEnabled) {
+            http
+                    .csrf(csrf -> csrf.disable())
+                    .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                    .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+            return http.build();
+        }
+
+        var encoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
+        var inMemory = new InMemoryUserDetailsManager(
+                User.withUsername(docsUser)
+                        .password(encoder.encode(docsPass))
+                        .roles("DOCS")
+                        .build()
+        );
+
+        var provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(inMemory);
+        provider.setPasswordEncoder(encoder);
+
+        http
+                .csrf(csrf -> csrf.disable())
+                .authenticationProvider(provider)
+                .authorizeHttpRequests(auth -> auth.anyRequest().hasRole("DOCS"))
+                .httpBasic(Customizer.withDefaults())
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         return http.build();
     }
