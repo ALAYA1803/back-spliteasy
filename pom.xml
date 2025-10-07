@@ -22,7 +22,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <!-- Ajusta si quieres versionar explícitamente estas libs -->
-        <springdoc.version>2.6.0</springdoc.version>
+        <springdoc.version>2.8.11</springdoc.version>
         <cloudinary.version>1.33.0</cloudinary.version>
         <jjwt.version>0.12.6</jjwt.version>
         <postgres.version>42.7.3</postgres.version>
