@@ -24,18 +24,25 @@ public class ContributionsContextFacadeImpl implements ContributionsContextFacad
 
     @Override
     public Long createContribution(Long billId, Long householdId, String description, LocalDate fechaLimite, String strategy) {
-        return createContribution(billId, householdId, description, fechaLimite, strategy, null);
+        return createContribution(billId, householdId, description, fechaLimite, strategy, null, null, null);
     }
 
     @Override
     public Long createContribution(Long billId, Long householdId, String description, LocalDate fechaLimite, String strategy, List<Long> memberIds) {
+        return createContribution(billId, householdId, description, fechaLimite, strategy, memberIds, null, null);
+    }
+
+    @Override
+    public Long createContribution(Long billId, Long householdId, String description, LocalDate fechaLimite, String strategy, List<Long> memberIds, String qr, String numero) {
         var command = new CreateContributionCommand(
                 billId,
                 householdId,
                 description,
                 fechaLimite,
                 Strategy.valueOf(strategy.toUpperCase()),
-                memberIds
+                memberIds,
+                qr,
+                numero
         );
         var result = commandService.handle(command);
         return result.map(c -> c.getId()).orElse(0L);

@@ -25,9 +25,7 @@ import java.util.List;
 @Setter
 public class Contribution extends AuditableAbstractAggregateRoot<Contribution> {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    // El id está definido en la superclase AuditableAbstractAggregateRoot
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "bill_id", nullable = false)
@@ -47,15 +45,25 @@ public class Contribution extends AuditableAbstractAggregateRoot<Contribution> {
     @Column(nullable = false, length = 30)
     private Strategy strategy;
 
+    // Nuevo campo para almacenar QR (puede ser base64 o URL según la implementación del cliente)
+    @Column(name = "qr", columnDefinition = "TEXT")
+    private String qr;
+
+    // Nuevo campo para almacenar número de representante (9 dígitos, empieza con 9)
+    @Column(name = "numero", nullable = false, length = 9)
+    private String numero;
+
     protected Contribution() {
     }
 
-    private Contribution(Bill bill, Household household, String description, LocalDate fechaLimite, Strategy strategy) {
+    private Contribution(Bill bill, Household household, String description, LocalDate fechaLimite, Strategy strategy, String qr, String numero) {
         this.bill = bill;
         this.household = household;
         this.description = description;
         this.fechaLimite = fechaLimite;
         this.strategy = strategy;
+        this.qr = qr;
+        this.numero = numero;
     }
 
     public static Contribution create(CreateContributionCommand command, Bill bill, Household household) {
@@ -63,12 +71,27 @@ public class Contribution extends AuditableAbstractAggregateRoot<Contribution> {
             throw new IllegalArgumentException("El bill no pertenece al household indicado.");
         }
 
+        // Validaciones adicionales para qr y numero
+        if (command.qr() == null || command.qr().isBlank()) {
+            throw new IllegalArgumentException("El QR no puede estar vacío.");
+        }
+
+        if (command.numero() == null || command.numero().isBlank()) {
+            throw new IllegalArgumentException("El número no puede estar vacío.");
+        }
+
+        if (!command.numero().matches("^9\\d{8}$")) {
+            throw new IllegalArgumentException("El número debe tener 9 dígitos y comenzar con 9.");
+        }
+
         return new Contribution(
                 bill,
                 household,
                 command.description(),
                 command.fechaLimite(),
-                command.strategy()
+                command.strategy(),
+                command.qr(),
+                command.numero()
         );
     }
 
@@ -77,11 +100,25 @@ public class Contribution extends AuditableAbstractAggregateRoot<Contribution> {
             throw new IllegalArgumentException("El bill no pertenece al household indicado.");
         }
 
+        if (command.qr() == null || command.qr().isBlank()) {
+            throw new IllegalArgumentException("El QR no puede estar vacío.");
+        }
+
+        if (command.numero() == null || command.numero().isBlank()) {
+            throw new IllegalArgumentException("El número no puede estar vacío.");
+        }
+
+        if (!command.numero().matches("^9\\d{8}$")) {
+            throw new IllegalArgumentException("El número debe tener 9 dígitos y comenzar con 9.");
+        }
+
         this.bill = bill;
         this.household = household;
         this.description = command.description();
         this.fechaLimite = command.fechaLimite();
         this.strategy = command.strategy();
+        this.qr = command.qr();
+        this.numero = command.numero();
     }
 
     public void distribute(

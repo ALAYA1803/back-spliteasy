@@ -1,9 +1,6 @@
 package com.example.spliteasybackend.contributions.domain.models.commands;
 
-import com.example.spliteasybackend.contributions.domain.models.valueobjects.Strategy;
-
 import java.time.LocalDate;
-import java.util.List;
 
 public record CreateContributionCommand(
         Long billId,
@@ -11,7 +8,9 @@ public record CreateContributionCommand(
         String description,
         java.time.LocalDate fechaLimite,
         com.example.spliteasybackend.contributions.domain.models.valueobjects.Strategy strategy,
-        java.util.List<Long> memberIds
+        java.util.List<Long> memberIds,
+        String qr,
+        String numero
 ) {
     public CreateContributionCommand {
         if (billId == null || billId <= 0)
@@ -28,5 +27,15 @@ public record CreateContributionCommand(
 
         if (strategy == null)
             throw new IllegalArgumentException("Debe especificarse una estrategia de contribución.");
+
+        if (qr == null || qr.isBlank())
+            throw new IllegalArgumentException("El QR no puede estar vacío.");
+
+        if (numero == null || numero.isBlank())
+            throw new IllegalArgumentException("El número no puede estar vacío.");
+
+        // Validación para números peruanos según la regla solicitada: 9 dígitos y comienza con 9
+        if (!numero.matches("^9\\d{8}$"))
+            throw new IllegalArgumentException("El número debe tener 9 dígitos y comenzar con 9.");
     }
 }

@@ -13,7 +13,9 @@ public class CreateContributionCommandFromResourceAssembler {
                 resource.description(),
                 resource.fechaLimite(),
                 Strategy.valueOf(resource.strategy().toUpperCase()),
-                resource.memberIds()
+                resource.memberIds(),
+                resource.qr(),
+                resource.numero()
         );
     }
 }
