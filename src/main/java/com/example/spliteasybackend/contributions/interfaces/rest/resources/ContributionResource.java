@@ -8,6 +8,8 @@ public record ContributionResource(
         Long householdId,
         String description,
         String strategy,
-        LocalDate fechaLimite
+        LocalDate fechaLimite,
+        String qr,
+        String numero
 ) {
 }

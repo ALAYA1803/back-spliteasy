@@ -12,7 +12,9 @@ public class ContributionResourceFromEntityAssembler {
                 entity.getHousehold() != null ? entity.getHousehold().getId() : null,
                 entity.getDescription(),
                 entity.getStrategy().name(),
-                entity.getFechaLimite()
+                entity.getFechaLimite(),
+                entity.getQr(),
+                entity.getNumero()
         );
     }
 }
