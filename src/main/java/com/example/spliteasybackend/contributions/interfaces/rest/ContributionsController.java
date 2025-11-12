@@ -1,4 +1,4 @@
-package com.example.spliteasybackend.contributions.interfaces;
+package com.example.spliteasybackend.contributions.interfaces.rest;
 
 import com.example.spliteasybackend.contributions.domain.models.queries.GetAllContributionsQuery;
 import com.example.spliteasybackend.contributions.domain.models.queries.GetContributionByIdQuery;
